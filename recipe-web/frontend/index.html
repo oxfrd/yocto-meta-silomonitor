@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Silo Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        .header h1 { 
+            font-size: 2.5em; 
+            background: linear-gradient(45deg, #00d4ff, #7b68ee);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .card {
+            background: rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease;
+        }
+        .card:hover { transform: translateY(-5px); }
+        .btn {
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6); }
+        .btn-success { background: linear-gradient(45deg, #11998e, #38ef7d); }
+        .sensors-grid { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 15px; }
+        .sensor { 
+            background: rgba(0,0,0,0.3); 
+            padding: 15px; 
+            border-radius: 12px; 
+            min-width: 220px;
+            border-left: 4px solid #667eea;
+        }
+        .sensor.unassigned { border-left-color: #ff6b6b; opacity: 0.7; }
+        .temp { font-size: 2em; font-weight: bold; color: #00d4ff; }
+        .temp.critical { color: #ff4757; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        #chart-container { height: 400px; margin-top: 20px; }
+        .form-group { margin: 10px 0; }
+        .form-group label { display: block; margin-bottom: 5px; color: #b0b0b0; }
+        .form-group input { 
+            width: 100%; padding: 10px; 
+            background: rgba(255,255,255,0.1); 
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            color: white;
+        }
+        .form-group input::placeholder { color: #888; }
+        .status { padding: 10px; border-radius: 8px; margin: 10px 0; }
+        .status.new { background: rgba(255, 193, 7, 0.2); border: 1px solid #ffc107; }
+        .status.saved { background: rgba(40, 167, 69, 0.2); border: 1px solid #28a745; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌾 Silo Monitor</h1>
+            <div id="status" class="status">Kliknij "Skanuj" aby znaleźć czujniki</div>
+        </div>
+        
+        <div class="grid">
+            <div class="card">
+                <h2>📡 Czujniki</h2>
+                <button onclick="scanSensors()" class="btn">🔍 Skanuj czujniki</button>
+                <div id="sensors" class="sensors-grid"></div>
+            </div>
+            <div class="card">
+                <h2>🌾 Silos - Temperatury Live</h2>
+                
+                <!-- Silo image with transparent background - OUTLINE ONLY -->
+                <div class="silo-visual" style="position: relative; height: 600px; margin-bottom: 20px; background: transparent;">
+                    <!-- Silo kontur z przezroczystym tłem -->
+                    <img src="./files/silo-img.png" 
+                        id="silo-outline"
+                        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1; mix-blend-mode: multiply; opacity: 0.5;">
+                    <!-- Temperature labels - ADJUST RELATIVE POSITIONS -->
+                    <div class="temp-label" style="position: absolute; top: 15%; left: 10%; z-index: 10;">
+                        <div class="temp-display" id="5m-temp" style="font-size: 2em; font-weight: bold; background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 8px; min-width: 80px; text-align: center;">--°C</div>
+                        <div class="label" style="font-size: 1.2em; font-weight: bold; margin-top: 10px; color: #ccc;">5m</div>
+                    </div>
+                        <!-- Ambient temperature below labels -->
+                        <div style="position: absolute; left: 0; right: 0; bottom: -50px; text-align: left; z-index: 10;">
+                            <span style="display: inline-block; background: rgba(0,0,0,0.6); color: #e0e0e0; font-size: 1.3em; font-weight: 600; padding: 8px 18px; border-radius: 10px; margin-top: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                                🌡️ Temperatura otoczenia: <span id="ambient-temp">--°C</span>
+                            </span>
+                        </div>
+
+                    <!-- Arrow between -->
+                    <!-- <img src="./double-arrow.png" alt="arrow" style="position: absolute; top: 25%; left: 40px; width: 30px; height: 110px; z-index: 9; opacity: 0.85; pointer-events: none; filter: brightness(0) invert(0.3);"> -->
+
+                    <div class="temp-label" style="position: absolute; top: 45%; left: 10%; z-index: 10;">
+                        <div class="temp-display" id="3m-temp" style="font-size: 2em; font-weight: bold; background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 8px; min-width: 80px; text-align: center;">--°C</div>
+                        <div class="label" style="font-size: 1.2em; font-weight: bold; margin-top: 10px; color: #ccc;">3m</div>
+                    </div>
+
+                    <!-- Arrow between -->
+                    <!-- <img src="./double-arrow.png" alt="arrow" style="position: absolute; top: 54%; left: 40px; width: 30px; height: 125px; z-index: 9; opacity: 0.85; pointer-events: none; filter: brightness(0) invert(0.3);"> -->
+
+                    <div class="temp-label" style="position: absolute; top: 75%; left: 10%; z-index: 10;">
+                        <div class="temp-display" id="1m-temp" style="font-size: 2em; font-weight: bold; background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 8px; min-width: 80px; text-align: center;">--°C</div>
+                        <div class="label" style="font-size: 1.2em; font-weight: bold; margin-top: 10px; color: #ccc;">1m</div>
+                    </div>
+                    <!-- Arrow between -->
+                    <!-- <img src="./double-arrow.png" alt="arrow" style="position: absolute; top: 84%; left: 40px; width: 30px; height: 1px; z-index: 9; opacity: 0.85; pointer-events: none; filter: brightness(0) invert(0.3);"> -->
+                </div>
+                
+                <!-- Small chart below -->
+                <div style="height: 250px; margin-top: 80px;">
+                    <canvas id="chart"></canvas>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        let chart;
+        const ctx = document.getElementById('chart').getContext('2d');
+        
+        // Inicjalizacja wykresu
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: { datasets: [] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: false, grid: { color: 'rgba(255,255,255,0.1)' } },
+                    x: { grid: { color: 'rgba(255,255,255,0.1)' } }
+                },
+                plugins: { legend: { labels: { color: '#e0e0e0' } } },
+                backgroundColor: 'rgba(255,255,255,0.05)'
+            }
+        });
+
+        async function scanSensors() {
+            try {
+                document.getElementById('status').textContent = 'Skanowanie...';
+                document.getElementById('status').className = 'status';
+                
+                const response = await fetch('http://127.0.0.1:5000/api/scan');
+                const sensors = await response.json();
+                
+                renderSensors(sensors);
+                updateChart(sensors);
+                document.getElementById('status').textContent = `${sensors.length} czujników znalezionych`;
+                document.getElementById('status').className = 'status new';
+            } catch(e) {
+                document.getElementById('status').textContent = 'Błąd skanowania';
+                document.getElementById('status').className = 'status';
+            }
+        }
+
+        function renderSensors(sensors) {
+            const container = document.getElementById('sensors');
+            container.innerHTML = sensors.map(sensor => `
+                <div class="sensor ${sensor.assigned ? '' : 'unassigned'}">
+                    <div><strong>${sensor.id}</strong></div>
+                    <div class="temp ${!isNaN(sensor.temp) && (sensor.temp < -10 || sensor.temp > 50) ? 'critical' : ''}">
+                        ${isNaN(sensor.temp) ? '--' : sensor.temp.toFixed(1)}°C
+                    </div>
+                    ${sensor.assigned ? 
+                        `<div>${sensor.name} (${sensor.position}m)</div>` : 
+                        `<div>
+                            <div class="form-group">
+                                <label>Nazwa:</label>
+                                <input id="name-${sensor.id}" placeholder="Silo 1 - góra">
+                            </div>
+                            <div class="form-group">
+                                <label>Pozycja (m):</label>
+                                <input id="pos-${sensor.id}" type="number" step="0.1" placeholder="2.5">
+                            </div>
+                            <button onclick="assignSensor('${sensor.id}')" class="btn btn-success">💾 Przypisz</button>
+                        </div>`
+                    }
+                </div>
+            `).join('');
+        }
+
+        async function assignSensor(id) {
+            const name = document.getElementById(`name-${id}`).value || `Silo ${id.slice(-4)}`;
+            const position = parseFloat(document.getElementById(`pos-${id}`).value) || 0;
+            
+            const response = await fetch('http://127.0.0.1:5000/api/assign', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({id, name, position, alarm_min: -5, alarm_max: 40})
+            });
+            
+            if (response.ok) {
+                document.getElementById('status').textContent = 'Czujnik zapisany!';
+                document.getElementById('status').className = 'status saved';
+                setTimeout(scanSensors, 1000);
+            }
+        }
+
+        function updateChart(sensors) {
+            const now = new Date().toLocaleTimeString();
+            chart.data.labels = sensors.map(s => s.id.slice(-8));
+            chart.data.datasets = [{
+                label: 'Temperatura (°C)',
+                data: sensors.map(s => s.temp || 0),
+                borderColor: '#00d4ff',
+                backgroundColor: 'rgba(0,212,255,0.1)',
+                tension: 0.4,
+                fill: true
+            }];
+            chart.update('none');
+
+            // Przykład: pobierz temp. otoczenia z czujnika o nazwie "ambient" lub innego źródła
+            const ambient = sensors.find(s => s.name && s.name.toLowerCase().includes('otoczenia') || s.id.toLowerCase().includes('ambient'));
+            document.getElementById('ambient-temp').textContent = ambient && !isNaN(ambient.temp) ? ambient.temp.toFixed(1) + '°C' : '--°C';
+            const _1m = sensors.find(s => s.name && s.name.toLowerCase().includes('1m'));
+            document.getElementById('1m-temp').textContent = _1m && !isNaN(_1m.temp) ? _1m.temp.toFixed(1) + '°C' : '--°C';
+            const _3m = sensors.find(s => s.name && s.name.toLowerCase().includes('3m'));
+            document.getElementById('3m-temp').textContent = _3m && !isNaN(_3m.temp) ? _3m.temp.toFixed(1) + '°C' : '--°C';
+            const _5m = sensors.find(s => s.name && s.name.toLowerCase().includes('5m'));
+            document.getElementById('5m-temp').textContent = _5m && !isNaN(_5m.temp) ? _5m.temp.toFixed(1) + '°C' : '--°C';
+
+        }
+
+        // Auto-refresh co 5s
+        setInterval(scanSensors, 5000);
+        scanSensors(); // pierwszy skan
+    </script>
+</body>
+</html>
