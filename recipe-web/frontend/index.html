@@ -30,7 +30,7 @@
             -webkit-text-fill-color: transparent;
             margin-bottom: 10px;
         }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr ; gap: 20px; }
         .card {
             background: rgba(255,255,255,0.08);
             border-radius: 16px;
@@ -80,71 +80,122 @@
         .status { padding: 10px; border-radius: 8px; margin: 10px 0; }
         .status.new { background: rgba(255, 193, 7, 0.2); border: 1px solid #ffc107; }
         .status.saved { background: rgba(40, 167, 69, 0.2); border: 1px solid #28a745; }
+
+        .silo-visual { 
+            position: relative !important;  /* MUSI być relative */
+            width: 500px;                  /* STAŁA szerokość */
+            height: 600px;
+            margin: 0 auto;
+        }
+
+        /* UTRWAL etykiety */
+        .temp-label {
+            position: absolute !important;
+            transform: translateX(-13%);   /* wyśrodkuj poziomo */
+            white-space: nowrap;
+        }
+
+        /* Blokada przesuwania obrazka */
+        #silo-outline {
+            position: absolute !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            width: 90% !important;
+        }
+
+        .sensor strong {
+        font-family: monospace;  /* Monospace dla adresów DS18B20 */
+        font-size: 0.9em;
+        word-break: break-all;   /* Zawijanie długich adresów */
+        display: block;
+        margin-bottom: 8px;
+        }
+
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>🌾 Silo Monitor</h1>
-            <div id="status" class="status">Kliknij "Skanuj" aby znaleźć czujniki</div>
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="switchTab('silo')">Silo - Live Temperatures</button>
+            <button class="tab-btn" onclick="switchTab('sensors')">Sensors</button>
         </div>
-        
-        <div class="grid">
-            <div class="card">
-                <h2>📡 Czujniki</h2>
-                <button onclick="scanSensors()" class="btn">🔍 Skanuj czujniki</button>
-                <div id="sensors" class="sensors-grid"></div>
-            </div>
-            <div class="card">
-                <h2>🌾 Silos - Temperatury Live</h2>
-                
-                <!-- Silo image with transparent background - OUTLINE ONLY -->
-                <div class="silo-visual" style="position: relative; height: 600px; margin-bottom: 20px; background: transparent;">
-                    <!-- Silo kontur z przezroczystym tłem -->
-                    <img src="./files/silo-img.png" 
-                        id="silo-outline"
-                        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1; mix-blend-mode: multiply; opacity: 0.5;">
-                    <!-- Temperature labels - ADJUST RELATIVE POSITIONS -->
-                    <div class="temp-label" style="position: absolute; top: 15%; left: 10%; z-index: 10;">
-                        <div class="temp-display" id="5m-temp" style="font-size: 2em; font-weight: bold; background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 8px; min-width: 80px; text-align: center;">--°C</div>
-                        <div class="label" style="font-size: 1.2em; font-weight: bold; margin-top: 10px; color: #ccc;">5m</div>
-                    </div>
+
+        <div id="silo-tab" class="tab-content active">
+            <div class="grid">
+                <div class="card">
+                    <div class="silo-visual" style="position: relative; height: 600px; margin-bottom: 20px; background: transparent;">
+                        <!-- Silo image with transparent background - OUTLINE ONLY -->
+                        <img src="./files/silo-img.png" 
+                            id="silo-outline"
+                            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1; mix-blend-mode: multiply; opacity: 0.5;">
+                        <!-- Temperature labels - ADJUST RELATIVE POSITIONS -->
+                        <div class="temp-label" style="position: absolute; top: 15%; left: 10%; z-index: 10;">
+                            <div class="temp-display" id="5m-temp" style="font-size: 2em; font-weight: bold; background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 8px; min-width: 80px; text-align: center;">--°C</div>
+                            <div class="label" style="font-size: 1.2em; font-weight: bold; margin-top: 10px; color: #ccc;">5m</div>
+                        </div>
+                        <div class="temp-label" style="position: absolute; top: 45%; left: 10%; z-index: 10;">
+                            <div class="temp-display" id="3m-temp" style="font-size: 2em; font-weight: bold; background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 8px; min-width: 80px; text-align: center;">--°C</div>
+                            <div class="label" style="font-size: 1.2em; font-weight: bold; margin-top: 10px; color: #ccc;">3m</div>
+                        </div>
+                        <div class="temp-label" style="position: absolute; top: 75%; left: 10%; z-index: 10;">
+                            <div class="temp-display" id="1m-temp" style="font-size: 2em; font-weight: bold; background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 8px; min-width: 80px; text-align: center;">--°C</div>
+                            <div class="label" style="font-size: 1.2em; font-weight: bold; margin-top: 10px; color: #ccc;">1m</div>
+                        </div>
                         <!-- Ambient temperature below labels -->
                         <div style="position: absolute; left: 0; right: 0; bottom: -50px; text-align: left; z-index: 10;">
                             <span style="display: inline-block; background: rgba(0,0,0,0.6); color: #e0e0e0; font-size: 1.3em; font-weight: 600; padding: 8px 18px; border-radius: 10px; margin-top: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
-                                🌡️ Temperatura otoczenia: <span id="ambient-temp">--°C</span>
+                                🌡️ Ambient temperature: <span id="ambient-temp">--°C</span>
                             </span>
                         </div>
-
-                    <!-- Arrow between -->
-                    <!-- <img src="./double-arrow.png" alt="arrow" style="position: absolute; top: 25%; left: 40px; width: 30px; height: 110px; z-index: 9; opacity: 0.85; pointer-events: none; filter: brightness(0) invert(0.3);"> -->
-
-                    <div class="temp-label" style="position: absolute; top: 45%; left: 10%; z-index: 10;">
-                        <div class="temp-display" id="3m-temp" style="font-size: 2em; font-weight: bold; background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 8px; min-width: 80px; text-align: center;">--°C</div>
-                        <div class="label" style="font-size: 1.2em; font-weight: bold; margin-top: 10px; color: #ccc;">3m</div>
                     </div>
-
-                    <!-- Arrow between -->
-                    <!-- <img src="./double-arrow.png" alt="arrow" style="position: absolute; top: 54%; left: 40px; width: 30px; height: 125px; z-index: 9; opacity: 0.85; pointer-events: none; filter: brightness(0) invert(0.3);"> -->
-
-                    <div class="temp-label" style="position: absolute; top: 75%; left: 10%; z-index: 10;">
-                        <div class="temp-display" id="1m-temp" style="font-size: 2em; font-weight: bold; background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 8px; min-width: 80px; text-align: center;">--°C</div>
-                        <div class="label" style="font-size: 1.2em; font-weight: bold; margin-top: 10px; color: #ccc;">1m</div>
+                    <!-- Small chart below -->
+                    <div style="height: 250px; margin-top: 80px;">
+                        <canvas id="chart"></canvas>
                     </div>
-                    <!-- Arrow between -->
-                    <!-- <img src="./double-arrow.png" alt="arrow" style="position: absolute; top: 84%; left: 40px; width: 30px; height: 1px; z-index: 9; opacity: 0.85; pointer-events: none; filter: brightness(0) invert(0.3);"> -->
-                </div>
-                
-                <!-- Small chart below -->
-                <div style="height: 250px; margin-top: 80px;">
-                    <canvas id="chart"></canvas>
                 </div>
             </div>
+        </div>
 
+        <div id="sensors-tab" class="tab-content">
+            <div class="grid">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2>Detected Sensors</h2>
+                        <button onclick="scanSensors()" style="padding: 10px 20px; background: #00d4ff; color: #000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">Scan</button>
+                    </div>
+                    <div id="status" class="status"></div>
+                    <div id="sensors-list" style="display: grid; gap: 10px;"></div>
+                </div>
+            </div>
         </div>
     </div>
 
+    <style>
+        .nav-tabs {
+            display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #00d4ff;
+        }
+        .tab-btn {
+            padding: 10px 20px; background: transparent; color: #ccc; border: none; font-size: 1em; cursor: pointer; border-bottom: 3px solid transparent;
+        }
+        .tab-btn.active {
+            color: #00d4ff; border-bottom-color: #00d4ff;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+
     <script>
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
         let chart;
         const ctx = document.getElementById('chart').getContext('2d');
         
@@ -183,25 +234,34 @@
         }
 
         function renderSensors(sensors) {
-            const container = document.getElementById('sensors');
+            const container = document.getElementById('sensors-list');
             container.innerHTML = sensors.map(sensor => `
                 <div class="sensor ${sensor.assigned ? '' : 'unassigned'}">
-                    <div><strong>${sensor.id}</strong></div>
+                    <!-- PEŁNY ADRES DS18B20 zamiast skróconego -->
+                    <div><strong>📍 ${sensor.id}</strong></div>
                     <div class="temp ${!isNaN(sensor.temp) && (sensor.temp < -10 || sensor.temp > 50) ? 'critical' : ''}">
                         ${isNaN(sensor.temp) ? '--' : sensor.temp.toFixed(1)}°C
                     </div>
                     ${sensor.assigned ? 
-                        `<div>${sensor.name} (${sensor.position}m)</div>` : 
+                        `<div>✅ ${sensor.name} (${sensor.position}m)</div>` : 
                         `<div>
                             <div class="form-group">
-                                <label>Nazwa:</label>
-                                <input id="name-${sensor.id}" placeholder="Silo 1 - góra">
+                                <label>📝 Nazwa:</label>
+                                <input id="name-${sensor.id}" placeholder="Silo 1 - 5m">
                             </div>
                             <div class="form-group">
-                                <label>Pozycja (m):</label>
-                                <input id="pos-${sensor.id}" type="number" step="0.1" placeholder="2.5">
+                                <label>📏 Wysokość (m):</label>
+                                <input id="pos-${sensor.id}" type="number" step="0.1" min="0" max="10" placeholder="5.0">
                             </div>
-                            <button onclick="assignSensor('${sensor.id}')" class="btn btn-success">💾 Przypisz</button>
+                            <div class="form-group">
+                                <label>🚨 Alarm MIN:</label>
+                                <input id="min-${sensor.id}" type="number" step="0.5" value="-5" placeholder="-5">
+                            </div>
+                            <div class="form-group">
+                                <label>🚨 Alarm MAX:</label>
+                                <input id="max-${sensor.id}" type="number" step="0.5" value="40" placeholder="40">
+                            </div>
+                            <button onclick="assignSensor('${sensor.id}')" class="btn btn-success">💾 Zapisz</button>
                         </div>`
                     }
                 </div>
@@ -209,19 +269,26 @@
         }
 
         async function assignSensor(id) {
-            const name = document.getElementById(`name-${id}`).value || `Silo ${id.slice(-4)}`;
+            const name = document.getElementById(`name-${id}`).value || `Sensor ${id.slice(-8)}`;
             const position = parseFloat(document.getElementById(`pos-${id}`).value) || 0;
+            const alarm_min = parseFloat(document.getElementById(`min-${id}`).value) || -5;
+            const alarm_max = parseFloat(document.getElementById(`max-${id}`).value) || 40;
             
-            const response = await fetch('http://127.0.0.1:5000/api/assign', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({id, name, position, alarm_min: -5, alarm_max: 40})
-            });
-            
-            if (response.ok) {
-                document.getElementById('status').textContent = 'Czujnik zapisany!';
-                document.getElementById('status').className = 'status saved';
-                setTimeout(scanSensors, 1000);
+            try {
+                const response = await fetch('http://127.0.0.1:5000/api/assign', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id, name, position, alarm_min, alarm_max})
+                });
+                
+                if (response.ok) {
+                    document.getElementById('status').textContent = `✅ ${name} zapisany!`;
+                    document.getElementById('status').className = 'status saved';
+                    setTimeout(scanSensors, 1000);
+                }
+            } catch(e) {
+                document.getElementById('status').textContent = '❌ Błąd zapisu';
+                document.getElementById('status').className = 'status';
             }
         }
 
@@ -239,7 +306,7 @@
             chart.update('none');
 
             // Przykład: pobierz temp. otoczenia z czujnika o nazwie "ambient" lub innego źródła
-            const ambient = sensors.find(s => s.name && s.name.toLowerCase().includes('otoczenia') || s.id.toLowerCase().includes('ambient'));
+            const ambient = sensors.find(s => s.name && s.name.toLowerCase().includes('ambient') || s.id.toLowerCase().includes('ambient'));
             document.getElementById('ambient-temp').textContent = ambient && !isNaN(ambient.temp) ? ambient.temp.toFixed(1) + '°C' : '--°C';
             const _1m = sensors.find(s => s.name && s.name.toLowerCase().includes('1m'));
             document.getElementById('1m-temp').textContent = _1m && !isNaN(_1m.temp) ? _1m.temp.toFixed(1) + '°C' : '--°C';
