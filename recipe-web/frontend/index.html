@@ -272,12 +272,89 @@
     </style>
 
     <script>
+        // Globals
+        let siloAssignments = {
+            '5m': null,
+            '3m': null,
+            '1m': null,
+            'ambient': null
+        };
+
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             document.getElementById(tabName + '-tab').classList.add('active');
             event.target.classList.add('active');
-        }  
+        }
+
+        function loadAssignments() {
+            const saved = localStorage.getItem('siloAssignments');
+            if (saved) {
+                siloAssignments = JSON.parse(saved);
+                updateSelects();
+            }
+        }
+
+        function updateSelects() {
+            ['5m', '3m', '1m', 'ambient'].forEach(pos => {
+                const select = document.getElementById(`select-${pos}`);
+                if (select && siloAssignments[pos]) {
+                    select.value = siloAssignments[pos];
+                }
+            });
+        }
+
+        function populateSelects(sensors) {
+            const options = ['<option value="">-- Wybierz --</option>'];
+            sensors.forEach(sensor => {
+                options.push(`<option value="${sensor.id}">${sensor.id.slice(-8)} - ${sensor.name || 'Nieprzypisany'}</option>`);
+            });
+            
+            // 🆕 ZACHOWAJ aktualne wartości PRZED zmianą HTML
+            const savedValues = {};
+            ['5m', '3m', '1m', 'ambient'].forEach(pos => {
+                const select = document.getElementById(`select-${pos}`);
+                savedValues[pos] = select ? select.value : null;
+            });
+            
+            // Wypełnij select'y
+            ['5m', '3m', '1m', 'ambient'].forEach(pos => {
+                const select = document.getElementById(`select-${pos}`);
+                if (select) {
+                    select.innerHTML = options.join('');
+                    // 🆕 PRZYWRÓĆ zapisaną wartość
+                    if (savedValues[pos] && select.querySelector(`option[value="${savedValues[pos]}"]`)) {
+                        select.value = savedValues[pos];
+                    }
+                }
+            });
+        }
+
+        function updateAssignmentsPreview(sensors) {
+            const preview = document.getElementById('assignments-preview');
+            let html = '<h4 style="margin-bottom: 15px;">Podgląd:</h4>';
+            
+            ['5m', '3m', '1m', 'ambient'].forEach(pos => {
+                const sensorId = siloAssignments[pos];
+                const sensor = sensors.find(s => s.id === sensorId);
+                const status = sensor ? `✅ ${sensor.name || 'OK'} (${sensor.temp?.toFixed(1) || '--'}°C)` : '❌ Brak';
+                html += `<div style="padding: 8px; border-left: 4px solid ${getColorForPosition(pos)}; margin: 8px 0; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                    <strong>${pos.toUpperCase()}:</strong> ${status}
+                </div>`;
+            });
+            preview.innerHTML = html;
+        }
+
+        function saveAssignments() {
+            siloAssignments = {
+                '5m': document.getElementById('select-5m').value,
+                '3m': document.getElementById('select-3m').value,
+                '1m': document.getElementById('select-1m').value,
+                'ambient': document.getElementById('select-ambient').value
+            };
+            localStorage.setItem('siloAssignments', JSON.stringify(siloAssignments));
+            alert('✅ Przypisania zapisane!');
+        }
 
         async function scanSensors() {
             try {
@@ -288,7 +365,9 @@
                 const sensors = await response.json();
                 
                 renderSensors(sensors);
-                updateIndividualCharts(sensors);  // ✅ To obsłuży WSZYSTKO
+                populateSelects(sensors);
+                updateAssignmentsPreview(sensors);
+                updateIndividualCharts(sensors);
                 document.getElementById('status').textContent = `${sensors.length} czujników znalezionych`;
                 document.getElementById('status').className = 'status new';
             } catch(e) {
@@ -358,13 +437,10 @@
         function updateIndividualCharts(sensors) {
             const now = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             
-            const _5m = sensors.find(s => s.name === "5m" || s.name?.toLowerCase().includes('5m'));
-            const _3m = sensors.find(s => s.name === "3m" || s.name?.toLowerCase().includes('3m'));
-            const _1m = sensors.find(s => s.name === "1m" || s.name?.toLowerCase().includes('1m'));
-            const ambient = sensors.find(s => 
-                s.id === "ambient" || 
-                s.name === "ambient"
-            );
+            const _5m = siloAssignments['5m'] ? sensors.find(s => s.id === siloAssignments['5m']) : null;
+            const _3m = siloAssignments['3m'] ? sensors.find(s => s.id === siloAssignments['3m']) : null;
+            const _1m = siloAssignments['1m'] ? sensors.find(s => s.id === siloAssignments['1m']) : null;
+            const ambient = siloAssignments['ambient'] ? sensors.find(s => s.id === siloAssignments['ambient']) : null;
             
             // 🆕 FUNKCJA do ustawiania klasy critical
             function updateTempDisplay(id, temp, isCritical) {
@@ -486,8 +562,9 @@
         };
 
         // Auto-refresh co 5s
-        setInterval(scanSensors, 2000);
+        loadAssignments();
         scanSensors(); // pierwszy skan
+        setInterval(scanSensors, 2000);
     </script>
 </body>
 </html>
