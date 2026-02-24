@@ -111,13 +111,25 @@
         margin-bottom: 8px;
         }
 
+        .temp-display {
+            transition: color 0.3s ease;
+        }
+
+        .temp-display.critical {
+            color: #ff4757 !important;
+            animation: pulse 1s infinite;
+            box-shadow: 0 0 20px rgba(255, 71, 87, 0.5);
+        }
+
+
     </style>
 </head>
 <body>
     <div class="container">
         <div class="nav-tabs">
-            <button class="tab-btn active" onclick="switchTab('silo')">Silo - Live Temperatures</button>
+            <button class="tab-btn active" onclick="switchTab('silo')">Silo</button>
             <button class="tab-btn" onclick="switchTab('sensors')">Sensors</button>
+            <button class="tab-btn" onclick="switchTab('settings')">⚙️ Ustawienia</button>
         </div>
 
         <div id="silo-tab" class="tab-content active">
@@ -148,10 +160,33 @@
                             </span>
                         </div>
                     </div>
-                    <!-- Small chart below -->
-                    <div style="height: 250px; margin-top: 80px;">
-                        <canvas id="chart"></canvas>
+                    <!-- Charts -->
+                    <div style="margin-top: 20px;">
+                        <!-- Wykres 5m -->
+                        <div style="height: 150px; margin-bottom: 15px; background: rgba(0,212,255,0.1); border-radius: 8px; padding: 10px;">
+                            <div style="font-size: 0.9em; color: #00d4ff; margin-bottom: 5px;">📈 5m</div>
+                            <canvas id="chart-5m"></canvas>
+                        </div>
+                        
+                        <!-- Wykres 3m -->
+                        <div style="height: 150px; margin-bottom: 15px; background: rgba(255,107,107,0.1); border-radius: 8px; padding: 10px;">
+                            <div style="font-size: 0.9em; color: #ff6b6b; margin-bottom: 5px;">📈 3m</div>
+                            <canvas id="chart-3m"></canvas>
+                        </div>
+                        
+                        <!-- Wykres 1m -->
+                        <div style="height: 150px; margin-bottom: 15px; background: rgba(243,156,18,0.1); border-radius: 8px; padding: 10px;">
+                            <div style="font-size: 0.9em; color: #f39c12; margin-bottom: 5px;">📈 1m</div>
+                            <canvas id="chart-1m"></canvas>
+                        </div>
+                        
+                        <!-- Wykres otoczenia -->
+                        <div style="height: 150px; background: rgba(46,204,113,0.1); border-radius: 8px; padding: 10px;">
+                            <div style="font-size: 0.9em; color: #2ecc71; margin-bottom: 5px;">🌡️ Otoczenie</div>
+                            <canvas id="chart-ambient"></canvas>
+                        </div>
                     </div>
+
                 </div>
             </div>
         </div>
@@ -165,6 +200,54 @@
                     </div>
                     <div id="status" class="status"></div>
                     <div id="sensors-list" style="display: grid; gap: 10px;"></div>
+                </div>
+            </div>
+        </div>
+        <div id="settings-tab" class="tab-content">
+            <div class="grid">
+                <div class="card">
+                    <h2>🎯 Przypisz sensory do pozycji silosu</h2>
+                    <div style="margin: 20px 0;">
+                        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
+                            <!-- Pozycje silosu -->
+                            <div>
+                                <h3 style="color: #00d4ff;">📍 Pozycje silosu</h3>
+                                <div style="margin: 15px 0;">
+                                    <label>5m (góra):</label>
+                                    <select id="select-5m" style="width: 100%; padding: 8px; margin-top: 5px; background: rgba(255,255,255,0.1); color: white; border-radius: 5px;">
+                                        <option value="">-- Wybierz --</option>
+                                    </select>
+                                </div>
+                                <div style="margin: 15px 0;">
+                                    <label>3m:</label>
+                                    <select id="select-3m" style="width: 100%; padding: 8px; margin-top: 5px; background: rgba(255,255,255,0.1); color: white; border-radius: 5px;">
+                                        <option value="">-- Wybierz --</option>
+                                    </select>
+                                </div>
+                                <div style="margin: 15px 0;">
+                                    <label>1m:</label>
+                                    <select id="select-1m" style="width: 100%; padding: 8px; margin-top: 5px; background: rgba(255,255,255,0.1); color: white; border-radius: 5px;">
+                                        <option value="">-- Wybierz --</option>
+                                    </select>
+                                </div>
+                                <div style="margin: 15px 0;">
+                                    <label>🌡️ Otoczenie:</label>
+                                    <select id="select-ambient" style="width: 100%; padding: 8px; margin-top: 5px; background: rgba(255,255,255,0.1); color: white; border-radius: 5px;">
+                                        <option value="">-- Wybierz --</option>
+                                    </select>
+                                </div>
+                                <button onclick="saveAssignments()" class="btn btn-success" style="width: 100%; margin-top: 20px;">💾 Zapisz przypisania</button>
+                            </div>
+                            
+                            <!-- Podgląd przypisań -->
+                            <div>
+                                <h3 style="color: #2ecc71;">✅ Aktualne przypisania</h3>
+                                <div id="assignments-preview" style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 12px; min-height: 200px;">
+                                    <p style="color: #888; text-align: center;">Kliknij Scan aby zobaczyć sensory</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -194,26 +277,7 @@
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             document.getElementById(tabName + '-tab').classList.add('active');
             event.target.classList.add('active');
-        }
-
-        let chart;
-        const ctx = document.getElementById('chart').getContext('2d');
-        
-        // Inicjalizacja wykresu
-        chart = new Chart(ctx, {
-            type: 'line',
-            data: { datasets: [] },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: { beginAtZero: false, grid: { color: 'rgba(255,255,255,0.1)' } },
-                    x: { grid: { color: 'rgba(255,255,255,0.1)' } }
-                },
-                plugins: { legend: { labels: { color: '#e0e0e0' } } },
-                backgroundColor: 'rgba(255,255,255,0.05)'
-            }
-        });
+        }  
 
         async function scanSensors() {
             try {
@@ -224,11 +288,11 @@
                 const sensors = await response.json();
                 
                 renderSensors(sensors);
-                updateChart(sensors);
+                updateIndividualCharts(sensors);  // ✅ To obsłuży WSZYSTKO
                 document.getElementById('status').textContent = `${sensors.length} czujników znalezionych`;
                 document.getElementById('status').className = 'status new';
             } catch(e) {
-                document.getElementById('status').textContent = 'Błąd skanowania';
+                document.getElementById('status').textContent = '❌ Błąd: ' + e.message;
                 document.getElementById('status').className = 'status';
             }
         }
@@ -237,7 +301,6 @@
             const container = document.getElementById('sensors-list');
             container.innerHTML = sensors.map(sensor => `
                 <div class="sensor ${sensor.assigned ? '' : 'unassigned'}">
-                    <!-- PEŁNY ADRES DS18B20 zamiast skróconego -->
                     <div><strong>📍 ${sensor.id}</strong></div>
                     <div class="temp ${!isNaN(sensor.temp) && (sensor.temp < -10 || sensor.temp > 50) ? 'critical' : ''}">
                         ${isNaN(sensor.temp) ? '--' : sensor.temp.toFixed(1)}°C
@@ -292,33 +355,138 @@
             }
         }
 
-        function updateChart(sensors) {
-            const now = new Date().toLocaleTimeString();
-            chart.data.labels = sensors.map(s => s.id.slice(-8));
-            chart.data.datasets = [{
-                label: 'Temperatura (°C)',
-                data: sensors.map(s => s.temp || 0),
-                borderColor: '#00d4ff',
-                backgroundColor: 'rgba(0,212,255,0.1)',
-                tension: 0.4,
-                fill: true
-            }];
-            chart.update('none');
-
-            // Przykład: pobierz temp. otoczenia z czujnika o nazwie "ambient" lub innego źródła
-            const ambient = sensors.find(s => s.name && s.name.toLowerCase().includes('ambient') || s.id.toLowerCase().includes('ambient'));
-            document.getElementById('ambient-temp').textContent = ambient && !isNaN(ambient.temp) ? ambient.temp.toFixed(1) + '°C' : '--°C';
-            const _1m = sensors.find(s => s.name && s.name.toLowerCase().includes('1m'));
-            document.getElementById('1m-temp').textContent = _1m && !isNaN(_1m.temp) ? _1m.temp.toFixed(1) + '°C' : '--°C';
-            const _3m = sensors.find(s => s.name && s.name.toLowerCase().includes('3m'));
-            document.getElementById('3m-temp').textContent = _3m && !isNaN(_3m.temp) ? _3m.temp.toFixed(1) + '°C' : '--°C';
-            const _5m = sensors.find(s => s.name && s.name.toLowerCase().includes('5m'));
-            document.getElementById('5m-temp').textContent = _5m && !isNaN(_5m.temp) ? _5m.temp.toFixed(1) + '°C' : '--°C';
-
+        function updateIndividualCharts(sensors) {
+            const now = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            const _5m = sensors.find(s => s.name === "5m" || s.name?.toLowerCase().includes('5m'));
+            const _3m = sensors.find(s => s.name === "3m" || s.name?.toLowerCase().includes('3m'));
+            const _1m = sensors.find(s => s.name === "1m" || s.name?.toLowerCase().includes('1m'));
+            const ambient = sensors.find(s => 
+                s.id === "ambient" || 
+                s.name === "ambient"
+            );
+            
+            // 🆕 FUNKCJA do ustawiania klasy critical
+            function updateTempDisplay(id, temp, isCritical) {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = temp ? temp.toFixed(1) + '°C' : '--°C';
+                    if (isCritical) {
+                        element.classList.add('critical');
+                    } else {
+                        element.classList.remove('critical');
+                    }
+                }
+            }
+            
+            // Sprawdź granice alarmowe (te same co w sensors!)
+            const ALARM_MIN = -10;
+            const ALARM_MAX = 50;
+            
+            updateTempDisplay('5m-temp', _5m?.temp, _5m?.temp && (_5m.temp < ALARM_MIN || _5m.temp > ALARM_MAX));
+            updateTempDisplay('3m-temp', _3m?.temp, _3m?.temp && (_3m.temp < ALARM_MIN || _3m.temp > ALARM_MAX));
+            updateTempDisplay('1m-temp', _1m?.temp, _1m?.temp && (_1m.temp < ALARM_MIN || _1m.temp > ALARM_MAX));
+            updateTempDisplay('ambient-temp', ambient?.temp, ambient?.temp && (ambient.temp < ALARM_MIN || ambient.temp > ALARM_MAX));
+            
+            console.log('Found:', { _5m: _5m?.name, _3m: _3m?.name, _1m: _1m?.name, ambient: ambient?.name });
+            
+            // Reszta bez zmian - wykresy...
+            const positions = { '5m': _5m, '3m': _3m, '1m': _1m, 'ambient': ambient };
+            Object.keys(positions).forEach(pos => {
+                const sensor = positions[pos];
+                if (sensor && sensor.temp !== null && sensor.temp !== undefined) {
+                    history[pos].push({time: now, temp: sensor.temp});
+                    if (history[pos].length > 20) history[pos].shift();
+                }
+                updateSingleChart(pos, history[pos]);
+            });
         }
 
+        function updateSingleChart(position, data) {
+            const canvas = document.getElementById(`chart-${position}`);
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            
+            if (!charts[position]) {
+                // Stwórz nowy wykres
+                charts[position] = new Chart(ctx, {
+                    type: 'line',
+                    data: { labels: [], datasets: [{
+                        label: `${position.toUpperCase()} (°C)`,
+                        data: [],
+                        borderColor: getColorForPosition(position),
+                        backgroundColor: getColorForPosition(position, 0.1),
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 3
+                    }]},
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { 
+                                beginAtZero: false,
+                                grid: { color: 'rgba(255,255,255,0.1)' },
+                                ticks: { color: '#e0e0e0' }
+                            },
+                            x: { 
+                                grid: { color: 'rgba(255,255,255,0.1)' },
+                                ticks: { color: '#b0b0b0', maxRotation: 45 }
+                            }
+                        },
+                        plugins: { 
+                            legend: { labels: { color: '#e0e0e0' } },
+                            title: { display: false }
+                        }
+                    }
+                });
+            }
+            
+            // Aktualizuj dane
+            charts[position].data.labels = data.map(d => d.time);
+            charts[position].data.datasets[0].data = data.map(d => d.temp);
+            charts[position].update('none');
+        }
+
+        function getColorForPosition(pos) {
+            const colors = {
+                '5m': '#00d4ff',
+                '3m': '#ff6b6b', 
+                '1m': '#f39c12',
+                'ambient': '#2ecc71'
+            };
+            return colors[pos] || '#ffffff';
+        }
+
+        function getColorForPosition(pos, alpha) {
+            const colors = {
+                '5m': 'rgba(0,212,255,0.1)',
+                '3m': 'rgba(255,107,107,0.1)',
+                '1m': 'rgba(243,156,18,0.1)', 
+                'ambient': 'rgba(46,204,113,0.1)'
+            };
+            return colors[pos] || 'rgba(255,255,255,0.1)';
+        }
+
+        // Obiekty wykresów
+        let charts = {
+            '5m': null,
+            '3m': null, 
+            '1m': null,
+            'ambient': null
+        };
+
+        // Historia danych (max 50 próbek)
+        let history = {
+            '5m': [],
+            '3m': [],
+            '1m': [],
+            'ambient': []
+        };
+
         // Auto-refresh co 5s
-        setInterval(scanSensors, 5000);
+        setInterval(scanSensors, 2000);
         scanSensors(); // pierwszy skan
     </script>
 </body>

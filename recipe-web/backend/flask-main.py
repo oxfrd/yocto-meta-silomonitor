@@ -8,7 +8,7 @@
 def staticSensors():
     sensors = [
         {"id": "28ff123456789abc", "name": "5m", "temp": 22.5, "position": 5, "assigned": True},
-        {"id": "28ff123456789def", "name": "3m", "temp": 21.1, "position": 3, "assigned": True},
+        {"id": "28ff123456789def", "name": "3m", "temp": 50.4, "position": 3, "assigned": True},
         {"id": "28ff123456789ghi", "name": "1m", "temp": 19.8, "position": 1, "assigned": True},
         {"id": "28ff123456789xyz", "name": "ambient", "temp": 17.3, "position": 0, "assigned": True}
     ]
