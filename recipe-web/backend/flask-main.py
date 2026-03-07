@@ -1,54 +1,66 @@
-# from flask import Flask, jsonify
-# from flask_cors import CORS
-
-# app = Flask(__name__)
-# CORS(app)
-
-
-def staticSensors():
-    sensors = [
-        {"id": "28ff123456789abc", "name": "5m", "temp": 22.5, "position": 5, "assigned": True},
-        {"id": "28ff123456789def", "name": "3m", "temp": 50.4, "position": 3, "assigned": True},
-        {"id": "28ff123456789ghi", "name": "1m", "temp": 19.8, "position": 1, "assigned": True},
-        {"id": "28ff123456789xyz", "name": "ambient", "temp": 17.3, "position": 0, "assigned": True}
-    ]
-    # Return list sorted by position (5,3,1,0)
-    sensors = sorted(sensors, key=lambda s: s.get('position', -1), reverse=True)
-    return jsonify(sensors)
-
-# if __name__ == '__main__':
-#     app.run(debug=True)
-    
-    
-   ###### ///
-   
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request  # request dla query params
 from flask_cors import CORS
+import sys
+from sensors import SensorManager, RealSensorProvider, AssignmentsManager
 
-def create_app(config_name='default'):
+
+def create_app(config_name='default', mock=False):
     app = Flask(__name__)
-    # app.config.from_object(config[config_name])
-    CORS(app)
     
-    # # Inicjalizacja managera sensorów
-    # sensor_manager = SensorManager(app.config)
-    # app.sensor_manager = sensor_manager
+    # 🆕 POPRAWNY CORS - dla wszystkich portów i originów
+    CORS(app, resources={
+        r"/*": {
+            "origins": "*",  # Wszystkie origins
+            "methods": ["GET", "POST", "OPTIONS"], 
+            "allow_headers": ["Content-Type"]
+        }
+    })
+    
+    # 🆕 Użyj SensorManager
+    sensor_manager = SensorManager(mock=mock)
+    app.sensor_manager = sensor_manager
     
     @app.route('/api/scan')
     def scan():
-        return staticSensors()
+        sensors = app.sensor_manager.scan()
+        return jsonify([{"id": s.id} for s in sensors])
     
-    # @app.route('/api/assign', methods=['POST'])
-    # def assign():
-    #     data = request.get_json()
-    #     success = sensor_manager.assign_sensor(
-    #         data['id'], data['name'], data['position'],
-    #         data.get('alarm_min'), data.get('alarm_max')
-    #     )
-    #     return jsonify({'success': success})
+    @app.route('/api/temps')
+    def temps():
+        temps_dict = app.sensor_manager.get_temps()
+        return jsonify(temps_dict)
+    
+    @app.route('/api/switch-provider')
+    def switch_provider():
+        provider_type = request.args.get('type', 'real')  # ✅ Teraz request działa
+        if provider_type == 'mock':
+            app.sensor_manager.set_provider(SensorManager(mock=True).provider)
+            return jsonify({"status": "mock"})
+        else:
+            app.sensor_manager.set_provider(RealSensorProvider())
+            return jsonify({"status": "real"})
+        
+    @app.route('/api/assignments')
+    def get_assignments():
+        return jsonify(app.assignments_manager.get())
+
+    @app.route('/api/assignments', methods=['POST'])
+    def save_assignments():
+        data = request.json
+        app.assignments_manager.set(data)
+        return jsonify({"status": "saved"})
+
+    # Inicjalizacja w create_app():
+    assignments_manager = AssignmentsManager()
+    app.assignments_manager = assignments_manager
     
     return app
 
 if __name__ == '__main__':
-    app = create_app()
-    app.run(debug=True)
+    mock = '--mock' in sys.argv
+    app = create_app(mock=mock)
+    print("🚀 Backend działa:", "MOCK MODE" if mock else "REAL SENSORS")
+    print("📱 Telefon: http://192.168.1.xxx:5000")  # Twój lokalny IP!
+    
+    # 🆕 ZMIANA: 0.0.0.0 = DOSTĘPNE DLA TELEFONU
+    app.run(host='0.0.0.0', port=5000, debug=True)

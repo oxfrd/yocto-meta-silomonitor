@@ -269,6 +269,17 @@
         .tab-content.active {
             display: block;
         }
+
+        #sensors-list .temp {
+            font-size: 1.2em;
+            font-weight: bold;
+            transition: color 0.3s ease;
+        }
+
+        #sensors-list .temp.critical {
+            color: #ff4757 !important;
+            animation: pulse 1s infinite;
+        }
     </style>
 
     <script>
@@ -280,6 +291,10 @@
             'ambient': null
         };
 
+        const BACKEND_IP = '192.168.1.12';  // ← TWÓJ IP z ipconfig
+        const BACKEND_PORT = '5000';
+        const BACKEND_URL = `http://${BACKEND_IP}:${BACKEND_PORT}`;
+
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -287,30 +302,34 @@
             event.target.classList.add('active');
         }
 
-        function loadAssignments() {
-            const saved = localStorage.getItem('siloAssignments');
-            if (saved) {
-                siloAssignments = JSON.parse(saved);
-                updateSelects();
-            }
-        }
-
         function updateSelects() {
+            console.log('🔄 Przywracanie selectów:', siloAssignments);
+            
             ['5m', '3m', '1m', 'ambient'].forEach(pos => {
                 const select = document.getElementById(`select-${pos}`);
                 if (select && siloAssignments[pos]) {
-                    select.value = siloAssignments[pos];
+                    // Sprawdź czy opcja istnieje
+                    const option = select.querySelector(`option[value="${siloAssignments[pos]}"]`);
+                    if (option) {
+                        select.value = siloAssignments[pos];
+                        console.log(`✅ ${pos}: ${siloAssignments[pos]}`);
+                    } else {
+                        console.log(`❌ ${pos}: opcja ${siloAssignments[pos]} nie istnieje`);
+                    }
                 }
             });
         }
 
         function populateSelects(sensors) {
+            // sensors = [{id: "28ff123456789abc"}, ...]
             const options = ['<option value="">-- Wybierz --</option>'];
+            
             sensors.forEach(sensor => {
-                options.push(`<option value="${sensor.id}">${sensor.id.slice(-8)} - ${sensor.name || 'Nieprzypisany'}</option>`);
+                // Używa sensor.id z obiektu
+                options.push(`<option value="${sensor.id}">${sensor.id.slice(-8)} - ${sensor.name || 'Sensor'}</option>`);
             });
             
-            // 🆕 ZACHOWAJ aktualne wartości PRZED zmianą HTML
+            // Zachowaj wartości przed zmianą
             const savedValues = {};
             ['5m', '3m', '1m', 'ambient'].forEach(pos => {
                 const select = document.getElementById(`select-${pos}`);
@@ -322,7 +341,7 @@
                 const select = document.getElementById(`select-${pos}`);
                 if (select) {
                     select.innerHTML = options.join('');
-                    // 🆕 PRZYWRÓĆ zapisaną wartość
+                    // Przywróć zapisaną wartość
                     if (savedValues[pos] && select.querySelector(`option[value="${savedValues[pos]}"]`)) {
                         select.value = savedValues[pos];
                     }
@@ -337,7 +356,7 @@
             ['5m', '3m', '1m', 'ambient'].forEach(pos => {
                 const sensorId = siloAssignments[pos];
                 const sensor = sensors.find(s => s.id === sensorId);
-                const status = sensor ? `✅ ${sensor.name || 'OK'} (${sensor.temp?.toFixed(1) || '--'}°C)` : '❌ Brak';
+                const status = sensor ? `✅ ${sensor.id.slice(-8)} (${sensorId})` : '❌ Brak';
                 html += `<div style="padding: 8px; border-left: 4px solid ${getColorForPosition(pos)}; margin: 8px 0; background: rgba(255,255,255,0.05); border-radius: 4px;">
                     <strong>${pos.toUpperCase()}:</strong> ${status}
                 </div>`;
@@ -345,67 +364,111 @@
             preview.innerHTML = html;
         }
 
-        function saveAssignments() {
-            siloAssignments = {
-                '5m': document.getElementById('select-5m').value,
-                '3m': document.getElementById('select-3m').value,
-                '1m': document.getElementById('select-1m').value,
-                'ambient': document.getElementById('select-ambient').value
-            };
-            localStorage.setItem('siloAssignments', JSON.stringify(siloAssignments));
-            alert('✅ Przypisania zapisane!');
-        }
-
         async function scanSensors() {
             try {
-                document.getElementById('status').textContent = 'Skanowanie...';
-                document.getElementById('status').className = 'status';
+                document.getElementById('status').textContent = 'Skanowanie sensorów...';
                 
-                const response = await fetch('http://127.0.0.1:5000/api/scan');
-                const sensors = await response.json();
+                const response = await fetch(`${BACKEND_URL}/api/scan`);
+                const sensorIds = await response.json();
                 
-                renderSensors(sensors);
-                populateSelects(sensors);
-                updateAssignmentsPreview(sensors);
-                updateIndividualCharts(sensors);
-                document.getElementById('status').textContent = `${sensors.length} czujników znalezionych`;
+                // 🆕 POPRAW - wyodrębnij ID z obiektów
+                const sensors = sensorIds.map(item => item.id); 
+                
+                renderSensors(sensorIds);           // Lista obiektów [{id: "..."}]
+                populateSelects(sensorIds);         // Obiekty z id
+                updateAssignmentsPreview(sensorIds); // Obiekty z id
+                
+                document.getElementById('status').textContent = `${sensorIds.length} sensorów`;
                 document.getElementById('status').className = 'status new';
+                
             } catch(e) {
-                document.getElementById('status').textContent = '❌ Błąd: ' + e.message;
-                document.getElementById('status').className = 'status';
+                document.getElementById('status').textContent = '❌ Błąd skanu';
+                console.error('Scan error:', e);
             }
         }
 
-        function renderSensors(sensors) {
-            const container = document.getElementById('sensors-list');
-            container.innerHTML = sensors.map(sensor => `
-                <div class="sensor ${sensor.assigned ? '' : 'unassigned'}">
-                    <div><strong>📍 ${sensor.id}</strong></div>
-                    <div class="temp ${!isNaN(sensor.temp) && (sensor.temp < -10 || sensor.temp > 50) ? 'critical' : ''}">
-                        ${isNaN(sensor.temp) ? '--' : sensor.temp.toFixed(1)}°C
-                    </div>
-                    ${sensor.assigned ? 
-                        `<div>✅ ${sensor.name} (${sensor.position}m)</div>` : 
-                        `<div>
-                            <div class="form-group">
-                                <label>📝 Nazwa:</label>
-                                <input id="name-${sensor.id}" placeholder="Silo 1 - 5m">
-                            </div>
-                            <div class="form-group">
-                                <label>📏 Wysokość (m):</label>
-                                <input id="pos-${sensor.id}" type="number" step="0.1" min="0" max="10" placeholder="5.0">
-                            </div>
-                            <div class="form-group">
-                                <label>🚨 Alarm MIN:</label>
-                                <input id="min-${sensor.id}" type="number" step="0.5" value="-5" placeholder="-5">
-                            </div>
-                            <div class="form-group">
-                                <label>🚨 Alarm MAX:</label>
-                                <input id="max-${sensor.id}" type="number" step="0.5" value="40" placeholder="40">
-                            </div>
-                            <button onclick="assignSensor('${sensor.id}')" class="btn btn-success">💾 Zapisz</button>
-                        </div>`
+        async function updateTemps() {
+            const temps = await getTemps();
+            console.log('📡 Otrzymane temps:', temps);
+            
+            // 🆕 PRZEKształć format
+            const sensorsWithTemps = Object.entries(siloAssignments)
+                .map(([pos, sensorId]) => {
+                    if (sensorId && temps[sensorId]) {
+                        return {
+                            id: sensorId,
+                            name: pos,
+                            temp: temps[sensorId],
+                            position: pos
+                        };
                     }
+                    return null;
+                })
+                .filter(Boolean);
+            
+            console.log('🔄 Sensory dla silo:', sensorsWithTemps);
+            
+            // 🆕 AKTUALIZUJ Sensors + Silo
+            if (sensorsWithTemps.length > 0) {
+                updateIndividualCharts(sensorsWithTemps);
+                updateSensorsDisplay(temps);
+            }
+        }
+
+        function updateSensorsDisplay(temps) {
+            console.log('🔄 updateSensorsDisplay - temps:', temps); // DEBUG
+            
+            // Użyj data-sensor-id zamiast parsowania tekstu
+            const sensorDivs = document.querySelectorAll('#sensors-list .sensor');
+            
+            sensorDivs.forEach(sensorDiv => {
+                const sensorId = sensorDiv.getAttribute('data-sensor-id');
+                const tempElement = sensorDiv.querySelector('.temp');
+                
+                console.log(`Sensor ${sensorId}: temp=${temps[sensorId] ? temps[sensorId].toFixed(1) : 'brak'}`);
+                
+                if (temps[sensorId]) {
+                    const temp = temps[sensorId];
+                    tempElement.textContent = temp.toFixed(1) + '°C';
+                    
+                    // Critical check
+                    const ALARM_MIN = -10;
+                    const ALARM_MAX = 50;
+                    if (temp < ALARM_MIN || temp > ALARM_MAX) {
+                        tempElement.classList.add('critical');
+                        sensorDiv.style.borderLeft = '4px solid #ff4757';
+                        sensorDiv.style.background = 'rgba(255, 71, 87, 0.1)';
+                    } else {
+                        tempElement.classList.remove('critical');
+                        sensorDiv.style.borderLeft = '4px solid #2ecc71';
+                        sensorDiv.style.background = 'rgba(46, 204, 113, 0.1)';
+                    }
+                } else {
+                    tempElement.textContent = '--°C';
+                    tempElement.classList.remove('critical');
+                    sensorDiv.style.borderLeft = '4px solid #95a5a6';
+                    sensorDiv.style.background = 'rgba(149, 165, 166, 0.1)';
+                }
+            });
+        }
+
+        function renderSensors(sensorIds) {
+            const container = document.getElementById('sensors-list');
+            
+            container.innerHTML = sensorIds.map(sensor => `
+                <div class="sensor 
+                    ${siloAssignments['5m'] === sensor.id || 
+                    siloAssignments['3m'] === sensor.id || 
+                    siloAssignments['1m'] === sensor.id || 
+                    siloAssignments['ambient'] === sensor.id ? 'assigned' : 'unassigned'}" 
+                    data-sensor-id="${sensor.id}">
+                    <div><strong>📍 ${sensor.id}</strong></div>
+                    <div class="temp">--°C</div>
+                    ${siloAssignments['5m'] === sensor.id ? `<div class="assigned-pos">✅ 5m</div>` :
+                    siloAssignments['3m'] === sensor.id ? `<div class="assigned-pos">✅ 3m</div>` :
+                    siloAssignments['1m'] === sensor.id ? `<div class="assigned-pos">✅ 1m</div>` :
+                    siloAssignments['ambient'] === sensor.id ? `<div class="assigned-pos">✅ Otoczenie</div>` : 
+                    `<div class="unassigned">⭕ Unassigned</div>`}
                 </div>
             `).join('');
         }
@@ -417,7 +480,7 @@
             const alarm_max = parseFloat(document.getElementById(`max-${id}`).value) || 40;
             
             try {
-                const response = await fetch('http://127.0.0.1:5000/api/assign', {
+                const response = await fetch(`${BACKEND_URL}/api/assign`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({id, name, position, alarm_min, alarm_max})
@@ -437,12 +500,15 @@
         function updateIndividualCharts(sensors) {
             const now = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             
-            const _5m = siloAssignments['5m'] ? sensors.find(s => s.id === siloAssignments['5m']) : null;
-            const _3m = siloAssignments['3m'] ? sensors.find(s => s.id === siloAssignments['3m']) : null;
-            const _1m = siloAssignments['1m'] ? sensors.find(s => s.id === siloAssignments['1m']) : null;
-            const ambient = siloAssignments['ambient'] ? sensors.find(s => s.id === siloAssignments['ambient']) : null;
+            // 🆕 Obsługa obu formatów (dla kompatybilności)
+            const _5m = sensors.find(s => s.id === siloAssignments['5m'] || s.position === '5m');
+            const _3m = sensors.find(s => s.id === siloAssignments['3m'] || s.position === '3m');
+            const _1m = sensors.find(s => s.id === siloAssignments['1m'] || s.position === '1m');
+            const ambient = sensors.find(s => s.id === siloAssignments['ambient'] || s.position === 'ambient');
             
-            // 🆕 FUNKCJA do ustawiania klasy critical
+            console.log('🎯 Znalezione sensory:', { _5m: _5m?.temp, _3m: _3m?.temp, _1m: _1m?.temp, ambient: ambient?.temp });
+            
+            // Reszta bez zmian - updateTempDisplay()...
             function updateTempDisplay(id, temp, isCritical) {
                 const element = document.getElementById(id);
                 if (element) {
@@ -455,7 +521,6 @@
                 }
             }
             
-            // Sprawdź granice alarmowe (te same co w sensors!)
             const ALARM_MIN = -10;
             const ALARM_MAX = 50;
             
@@ -464,15 +529,14 @@
             updateTempDisplay('1m-temp', _1m?.temp, _1m?.temp && (_1m.temp < ALARM_MIN || _1m.temp > ALARM_MAX));
             updateTempDisplay('ambient-temp', ambient?.temp, ambient?.temp && (ambient.temp < ALARM_MIN || ambient.temp > ALARM_MAX));
             
-            console.log('Found:', { _5m: _5m?.name, _3m: _3m?.name, _1m: _1m?.name, ambient: ambient?.name });
-            
-            // Reszta bez zmian - wykresy...
+            // Wykresy
             const positions = { '5m': _5m, '3m': _3m, '1m': _1m, 'ambient': ambient };
             Object.keys(positions).forEach(pos => {
                 const sensor = positions[pos];
                 if (sensor && sensor.temp !== null && sensor.temp !== undefined) {
                     history[pos].push({time: now, temp: sensor.temp});
                     if (history[pos].length > 20) history[pos].shift();
+                    console.log(`📈 Updating ${pos}: ${sensor.temp}°C`);
                 }
                 updateSingleChart(pos, history[pos]);
             });
@@ -545,6 +609,45 @@
             return colors[pos] || 'rgba(255,255,255,0.1)';
         }
 
+        async function getTemps() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/temps`);
+                return await response.json();
+            } catch(e) {
+                console.error('Błąd temperatur:', e);
+                return [];
+            }
+        }
+        
+        async function loadAssignments() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/assignments`);
+                siloAssignments = await response.json();
+                console.log('📥 Backend assignments:', siloAssignments);
+            } catch(e) {
+                console.error('Brak backendu, default:', e);
+                siloAssignments = {'5m':null,'3m':null,'1m':null,'ambient':null};
+            }
+        }
+
+        async function saveAssignments() {
+            siloAssignments = {
+                '5m': document.getElementById('select-5m').value || null,
+                '3m': document.getElementById('select-3m').value || null,
+                '1m': document.getElementById('select-1m').value || null,
+                'ambient': document.getElementById('select-ambient').value || null
+            };
+            
+            await fetch(`${BACKEND_URL}/api/assignments`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(siloAssignments)
+            });
+            
+            console.log('💾 Backend ZAPISANO!');
+            await updateTemps();
+        }
+
         // Obiekty wykresów
         let charts = {
             '5m': null,
@@ -561,10 +664,15 @@
             'ambient': []
         };
 
-        // Auto-refresh co 5s
-        loadAssignments();
-        scanSensors(); // pierwszy skan
-        setInterval(scanSensors, 2000);
+        async function initApp() {
+            await loadAssignments();
+            await scanSensors();
+            updateSelects();
+            await updateTemps();
+            setInterval(updateTemps, 5000);
+        }
+
+        initApp();
     </script>
 </body>
 </html>
