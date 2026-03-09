@@ -34,4 +34,5 @@ dtoverlay=w1-gpio,gpiopin=4 \
 DISTRO_FEATURES:append = " python3"
 IMAGE_INSTALL:append = " python3-core python3-json python3-flask"
 
-IMAGE_INSTALL:append = " silo-monitor-frontend silo-monitor-backend"
+IMAGE_INSTALL:append = " silo-monitor-frontend silo-monitor-backend curl"
+IMAGE_FEATURES:append = " ssh-server-dropbear"
