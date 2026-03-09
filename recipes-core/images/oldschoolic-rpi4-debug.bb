@@ -25,5 +25,13 @@ IMAGE_FSTYPES_DEBUGFS = "tar.bz2"
 
 # Enable 1-wire support for the DS18B20 temperature sensor
 ENABLE_W1 = "1"
+IMAGE_INSTALL:append = " kernel-modules temperature-sensors "
 KERNEL_MODULE_AUTOLOAD += "w1-gpio w1-therm"
-RPI_EXTRA_CONFIG += "dtoverlay=w1-gpio,gpiopin=4"
+RPI_EXTRA_CONFIG:append = " \
+dtoverlay=w1-gpio,gpiopin=4 \
+"
+
+DISTRO_FEATURES:append = " python3"
+IMAGE_INSTALL:append = " python3-core python3-json python3-flask"
+
+IMAGE_INSTALL:append = " silo-monitor-frontend silo-monitor-backend"
