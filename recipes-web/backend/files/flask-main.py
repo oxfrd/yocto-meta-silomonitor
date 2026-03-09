@@ -60,4 +60,4 @@ if __name__ == '__main__':
     print("📱 Telefon: http://192.168.1.xxx:5000")  # Twój lokalny IP!
     
     # 🆕 ZMIANA: 0.0.0.0 = DOSTĘPNE DLA TELEFONU
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000)
