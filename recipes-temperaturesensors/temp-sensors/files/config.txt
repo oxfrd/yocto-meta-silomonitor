@@ -1,2 +1,0 @@
-# 1-Wire na GPIO4
-dtoverlay=w1-gpio,gpiopin=4

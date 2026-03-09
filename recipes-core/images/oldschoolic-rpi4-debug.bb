@@ -25,7 +25,7 @@ IMAGE_FSTYPES_DEBUGFS = "tar.bz2"
 
 # Enable 1-wire support for the DS18B20 temperature sensor
 ENABLE_W1 = "1"
-IMAGE_INSTALL:append = " kernel-modules temperature-sensors "
+IMAGE_INSTALL:append = " kernel-modules"
 KERNEL_MODULE_AUTOLOAD += "w1-gpio w1-therm"
 RPI_EXTRA_CONFIG:append = " \
 dtoverlay=w1-gpio,gpiopin=4 \
