@@ -58,9 +58,15 @@ class RealSensorProvider(SensorInterface):
     def scan(self) -> List[str]:
         """Zwraca listę adresów sensorów"""
         try:
-            return [p.split('/')[-1].replace('-', '') 
-                   for p in glob.glob(f"{self.sensor_path}/28*")]
-        except:
+            # Szukaj wszystkich folderów zaczynających się od 28-
+            sensors = []
+            for path in glob.glob(f"{self.sensor_path}/28-*"):
+                sensor_id = os.path.basename(path)  # np. "28-0000090a1acd"
+                sensors.append(sensor_id)
+            print(f"🔍 Znalezione sensory: {sensors}")
+            return sensors
+        except Exception as e:
+            print(f"❌ Błąd skanowania: {e}")
             return []
     
     def get_temps(self) -> Dict[str, float]:
@@ -70,18 +76,34 @@ class RealSensorProvider(SensorInterface):
             temp = self._read_temp(sensor_id)
             if temp is not None:
                 temps[sensor_id] = temp
+                print(f"✅ {sensor_id}: {temp}°C")
+            else:
+                print(f"⚠️ {sensor_id}: Brak odczytu")
         return temps
     
     def _read_temp(self, sensor_id: str) -> Optional[float]:
+        """Czyta temperaturę z danego sensora"""
         try:
-            path = f"{self.sensor_path}/28-{sensor_id[2:]}"
-            with open(path, 'r') as f:
+            # sensor_id = "28-0000090a1acd"
+            w1_slave_path = f"{self.sensor_path}/{sensor_id}/w1_slave"
+            print(f"📖 Czytam: {w1_slave_path}")
+            
+            with open(w1_slave_path, 'r') as f:
                 lines = f.readlines()
+            
             if len(lines) > 1 and 'YES' in lines[0]:
-                temp_str = lines[1].split('t=')[1]
-                return float(temp_str) / 1000.0
-        except:
-            pass
+                # Linia 2: "t=22500" (w tysiącznych °C)
+                temp_line = lines[1]
+                if 't=' in temp_line:
+                    temp_raw = int(temp_line.split('t=')[1].strip())
+                    return round(temp_raw / 1000.0, 2)
+            else:
+                print(f"⚠️ {sensor_id}: CRC failed")
+        except FileNotFoundError:
+            print(f"❌ Plik nie znaleziony: {w1_slave_path}")
+        except Exception as e:
+            print(f"❌ Błąd odczytu {sensor_id}: {e}")
+        
         return None
 
 class MockSensorProvider(SensorInterface):
