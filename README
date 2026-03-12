@@ -39,3 +39,6 @@ II. Misc
 ========
 
 --- replace with specific information about the meta-silomonitor layer ---
+
+Update software on sd card:
+sudo bmaptool copy --bmap oldschoolic-rpi4-debug-raspberrypi4-64.rootfs.wic.bmap oldschoolic-rpi4-debug-raspberrypi4-64.rootfs.wic.bz2 /dev/sdb
