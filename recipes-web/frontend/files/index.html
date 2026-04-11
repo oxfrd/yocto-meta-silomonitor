@@ -1,11 +1,17 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="utf-8">
     <title>Silo Monitor</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
@@ -13,34 +19,50 @@
             min-height: 100vh;
             padding: 20px;
         }
-        .container { max-width: 1200px; margin: 0 auto; }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
         .header {
             text-align: center;
             margin-bottom: 30px;
-            background: rgba(255,255,255,0.05);
+            background: rgba(255, 255, 255, 0.05);
             padding: 20px;
             border-radius: 16px;
             backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
-        .header h1 { 
-            font-size: 2.5em; 
+
+        .header h1 {
+            font-size: 2.5em;
             background: linear-gradient(45deg, #00d4ff, #7b68ee);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 10px;
         }
-        .grid { display: grid; grid-template-columns: 1fr ; gap: 20px; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
         .card {
-            background: rgba(255,255,255,0.08);
+            background: rgba(255, 255, 255, 0.08);
             border-radius: 16px;
             padding: 20px;
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             transition: transform 0.3s ease;
         }
-        .card:hover { transform: translateY(-5px); }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
         .btn {
             background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
             border: none;
@@ -52,38 +74,108 @@
             transition: all 0.3s;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
         }
-        .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6); }
-        .btn-success { background: linear-gradient(45deg, #11998e, #38ef7d); }
-        .sensors-grid { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 15px; }
-        .sensor { 
-            background: rgba(0,0,0,0.3); 
-            padding: 15px; 
-            border-radius: 12px; 
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #11998e, #38ef7d);
+        }
+
+        .sensors-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .sensor {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 12px;
             min-width: 220px;
             border-left: 4px solid #667eea;
         }
-        .sensor.unassigned { border-left-color: #ff6b6b; opacity: 0.7; }
-        .temp { font-size: 2em; font-weight: bold; color: #00d4ff; }
-        .temp.critical { color: #ff4757; animation: pulse 1s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        #chart-container { height: 400px; margin-top: 20px; }
-        .form-group { margin: 10px 0; }
-        .form-group label { display: block; margin-bottom: 5px; color: #b0b0b0; }
-        .form-group input { 
-            width: 100%; padding: 10px; 
-            background: rgba(255,255,255,0.1); 
-            border: 1px solid rgba(255,255,255,0.2);
+
+        .sensor.unassigned {
+            border-left-color: #ff6b6b;
+            opacity: 0.7;
+        }
+
+        .temp {
+            font-size: 2em;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+
+        .temp.critical {
+            color: #ff4757;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        #chart-container {
+            height: 400px;
+            margin-top: 20px;
+        }
+
+        .form-group {
+            margin: 10px 0;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #b0b0b0;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 8px;
             color: white;
         }
-        .form-group input::placeholder { color: #888; }
-        .status { padding: 10px; border-radius: 8px; margin: 10px 0; }
-        .status.new { background: rgba(255, 193, 7, 0.2); border: 1px solid #ffc107; }
-        .status.saved { background: rgba(40, 167, 69, 0.2); border: 1px solid #28a745; }
 
-        .silo-visual { 
-            position: relative !important;  /* MUSI być relative */
-            width: 500px;                  /* STAŁA szerokość */
+        .form-group input::placeholder {
+            color: #888;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .status.new {
+            background: rgba(255, 193, 7, 0.2);
+            border: 1px solid #ffc107;
+        }
+
+        .status.saved {
+            background: rgba(40, 167, 69, 0.2);
+            border: 1px solid #28a745;
+        }
+
+        .silo-visual {
+            position: relative !important;
+            /* MUSI być relative */
+            width: 500px;
+            /* STAŁA szerokość */
             height: 600px;
             margin: 0 auto;
         }
@@ -91,7 +183,8 @@
         /* UTRWAL etykiety */
         .temp-label {
             position: absolute !important;
-            transform: translateX(-13%);   /* wyśrodkuj poziomo */
+            transform: translateX(-13%);
+            /* wyśrodkuj poziomo */
             white-space: nowrap;
         }
 
@@ -104,11 +197,13 @@
         }
 
         .sensor strong {
-        font-family: monospace;  /* Monospace dla adresów DS18B20 */
-        font-size: 0.9em;
-        word-break: break-all;   /* Zawijanie długich adresów */
-        display: block;
-        margin-bottom: 8px;
+            font-family: monospace;
+            /* Monospace dla adresów DS18B20 */
+            font-size: 0.9em;
+            word-break: break-all;
+            /* Zawijanie długich adresów */
+            display: block;
+            margin-bottom: 8px;
         }
 
         .temp-display {
@@ -120,10 +215,9 @@
             animation: pulse 1s infinite;
             box-shadow: 0 0 20px rgba(255, 71, 87, 0.5);
         }
-
-
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="nav-tabs">
@@ -135,27 +229,38 @@
         <div id="silo-tab" class="tab-content active">
             <div class="grid">
                 <div class="card">
-                    <div class="silo-visual" style="position: relative; height: 600px; margin-bottom: 20px; background: transparent;">
+                    <div class="silo-visual"
+                        style="position: relative; height: 600px; margin-bottom: 20px; background: transparent;">
                         <!-- Silo image with transparent background - OUTLINE ONLY -->
-                        <img src="./silo-img.png" 
-                            id="silo-outline"
+                        <img src="./silo-img.png" id="silo-outline"
                             style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1; mix-blend-mode: multiply; opacity: 0.5;">
                         <!-- Temperature labels - ADJUST RELATIVE POSITIONS -->
                         <div class="temp-label" style="position: absolute; top: 15%; left: 10%; z-index: 10;">
-                            <div class="temp-display" id="5m-temp" style="font-size: 2em; font-weight: bold; background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 8px; min-width: 80px; text-align: center;">--°C</div>
-                            <div class="label" style="font-size: 1.2em; font-weight: bold; margin-top: 10px; color: #ccc;">5m</div>
+                            <div class="temp-display" id="5m-temp"
+                                style="font-size: 2em; font-weight: bold; background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 8px; min-width: 80px; text-align: center;">
+                                --°C</div>
+                            <div class="label"
+                                style="font-size: 1.2em; font-weight: bold; margin-top: 10px; color: #ccc;">5m</div>
                         </div>
                         <div class="temp-label" style="position: absolute; top: 45%; left: 10%; z-index: 10;">
-                            <div class="temp-display" id="3m-temp" style="font-size: 2em; font-weight: bold; background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 8px; min-width: 80px; text-align: center;">--°C</div>
-                            <div class="label" style="font-size: 1.2em; font-weight: bold; margin-top: 10px; color: #ccc;">3m</div>
+                            <div class="temp-display" id="3m-temp"
+                                style="font-size: 2em; font-weight: bold; background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 8px; min-width: 80px; text-align: center;">
+                                --°C</div>
+                            <div class="label"
+                                style="font-size: 1.2em; font-weight: bold; margin-top: 10px; color: #ccc;">3m</div>
                         </div>
                         <div class="temp-label" style="position: absolute; top: 75%; left: 10%; z-index: 10;">
-                            <div class="temp-display" id="1m-temp" style="font-size: 2em; font-weight: bold; background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 8px; min-width: 80px; text-align: center;">--°C</div>
-                            <div class="label" style="font-size: 1.2em; font-weight: bold; margin-top: 10px; color: #ccc;">1m</div>
+                            <div class="temp-display" id="1m-temp"
+                                style="font-size: 2em; font-weight: bold; background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 8px; min-width: 80px; text-align: center;">
+                                --°C</div>
+                            <div class="label"
+                                style="font-size: 1.2em; font-weight: bold; margin-top: 10px; color: #ccc;">1m</div>
                         </div>
                         <!-- Ambient temperature below labels -->
-                        <div style="position: absolute; left: 0; right: 0; bottom: -50px; text-align: left; z-index: 10;">
-                            <span style="display: inline-block; background: rgba(0,0,0,0.6); color: #e0e0e0; font-size: 1.3em; font-weight: 600; padding: 8px 18px; border-radius: 10px; margin-top: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                        <div
+                            style="position: absolute; left: 0; right: 0; bottom: -50px; text-align: left; z-index: 10;">
+                            <span
+                                style="display: inline-block; background: rgba(0,0,0,0.6); color: #e0e0e0; font-size: 1.3em; font-weight: 600; padding: 8px 18px; border-radius: 10px; margin-top: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
                                 🌡️ Ambient temperature: <span id="ambient-temp">--°C</span>
                             </span>
                         </div>
@@ -163,25 +268,29 @@
                     <!-- Charts -->
                     <div style="margin-top: 20px;">
                         <!-- Wykres 5m -->
-                        <div style="height: 150px; margin-bottom: 15px; background: rgba(0,212,255,0.1); border-radius: 8px; padding: 10px;">
+                        <div
+                            style="height: 150px; margin-bottom: 15px; background: rgba(0,212,255,0.1); border-radius: 8px; padding: 10px;">
                             <div style="font-size: 0.9em; color: #00d4ff; margin-bottom: 5px;">📈 5m</div>
                             <canvas id="chart-5m"></canvas>
                         </div>
-                        
+
                         <!-- Wykres 3m -->
-                        <div style="height: 150px; margin-bottom: 15px; background: rgba(255,107,107,0.1); border-radius: 8px; padding: 10px;">
+                        <div
+                            style="height: 150px; margin-bottom: 15px; background: rgba(255,107,107,0.1); border-radius: 8px; padding: 10px;">
                             <div style="font-size: 0.9em; color: #ff6b6b; margin-bottom: 5px;">📈 3m</div>
                             <canvas id="chart-3m"></canvas>
                         </div>
-                        
+
                         <!-- Wykres 1m -->
-                        <div style="height: 150px; margin-bottom: 15px; background: rgba(243,156,18,0.1); border-radius: 8px; padding: 10px;">
+                        <div
+                            style="height: 150px; margin-bottom: 15px; background: rgba(243,156,18,0.1); border-radius: 8px; padding: 10px;">
                             <div style="font-size: 0.9em; color: #f39c12; margin-bottom: 5px;">📈 1m</div>
                             <canvas id="chart-1m"></canvas>
                         </div>
-                        
+
                         <!-- Wykres otoczenia -->
-                        <div style="height: 150px; background: rgba(46,204,113,0.1); border-radius: 8px; padding: 10px;">
+                        <div
+                            style="height: 150px; background: rgba(46,204,113,0.1); border-radius: 8px; padding: 10px;">
                             <div style="font-size: 0.9em; color: #2ecc71; margin-bottom: 5px;">🌡️ Otoczenie</div>
                             <canvas id="chart-ambient"></canvas>
                         </div>
@@ -194,9 +303,11 @@
         <div id="sensors-tab" class="tab-content">
             <div class="grid">
                 <div class="card">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                         <h2>Detected Sensors</h2>
-                        <button onclick="scanSensors()" style="padding: 10px 20px; background: #00d4ff; color: #000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">Scan</button>
+                        <button onclick="scanSensors()"
+                            style="padding: 10px 20px; background: #00d4ff; color: #000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">Scan</button>
                     </div>
                     <div id="status" class="status"></div>
                     <div id="sensors-list" style="display: grid; gap: 10px;"></div>
@@ -214,35 +325,41 @@
                                 <h3 style="color: #00d4ff;">📍 Pozycje silosu</h3>
                                 <div style="margin: 15px 0;">
                                     <label>5m (góra):</label>
-                                    <select id="select-5m" style="width: 100%; padding: 8px; margin-top: 5px; background: rgba(255,255,255,0.1); color: white; border-radius: 5px;">
+                                    <select id="select-5m"
+                                        style="width: 100%; padding: 8px; margin-top: 5px; background: rgba(255,255,255,0.1); color: white; border-radius: 5px;">
                                         <option value="">-- Wybierz --</option>
                                     </select>
                                 </div>
                                 <div style="margin: 15px 0;">
                                     <label>3m:</label>
-                                    <select id="select-3m" style="width: 100%; padding: 8px; margin-top: 5px; background: rgba(255,255,255,0.1); color: white; border-radius: 5px;">
+                                    <select id="select-3m"
+                                        style="width: 100%; padding: 8px; margin-top: 5px; background: rgba(255,255,255,0.1); color: white; border-radius: 5px;">
                                         <option value="">-- Wybierz --</option>
                                     </select>
                                 </div>
                                 <div style="margin: 15px 0;">
                                     <label>1m:</label>
-                                    <select id="select-1m" style="width: 100%; padding: 8px; margin-top: 5px; background: rgba(255,255,255,0.1); color: white; border-radius: 5px;">
+                                    <select id="select-1m"
+                                        style="width: 100%; padding: 8px; margin-top: 5px; background: rgba(255,255,255,0.1); color: white; border-radius: 5px;">
                                         <option value="">-- Wybierz --</option>
                                     </select>
                                 </div>
                                 <div style="margin: 15px 0;">
                                     <label>🌡️ Otoczenie:</label>
-                                    <select id="select-ambient" style="width: 100%; padding: 8px; margin-top: 5px; background: rgba(255,255,255,0.1); color: white; border-radius: 5px;">
+                                    <select id="select-ambient"
+                                        style="width: 100%; padding: 8px; margin-top: 5px; background: rgba(255,255,255,0.1); color: white; border-radius: 5px;">
                                         <option value="">-- Wybierz --</option>
                                     </select>
                                 </div>
-                                <button onclick="saveAssignments()" class="btn btn-success" style="width: 100%; margin-top: 20px;">💾 Zapisz przypisania</button>
+                                <button onclick="saveAssignments()" class="btn btn-success"
+                                    style="width: 100%; margin-top: 20px;">💾 Zapisz przypisania</button>
                             </div>
-                            
+
                             <!-- Podgląd przypisań -->
                             <div>
                                 <h3 style="color: #2ecc71;">✅ Aktualne przypisania</h3>
-                                <div id="assignments-preview" style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 12px; min-height: 200px;">
+                                <div id="assignments-preview"
+                                    style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 12px; min-height: 200px;">
                                     <p style="color: #888; text-align: center;">Kliknij Scan aby zobaczyć sensory</p>
                                 </div>
                             </div>
@@ -255,17 +372,31 @@
 
     <style>
         .nav-tabs {
-            display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #00d4ff;
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #00d4ff;
         }
+
         .tab-btn {
-            padding: 10px 20px; background: transparent; color: #ccc; border: none; font-size: 1em; cursor: pointer; border-bottom: 3px solid transparent;
+            padding: 10px 20px;
+            background: transparent;
+            color: #ccc;
+            border: none;
+            font-size: 1em;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
         }
+
         .tab-btn.active {
-            color: #00d4ff; border-bottom-color: #00d4ff;
+            color: #00d4ff;
+            border-bottom-color: #00d4ff;
         }
+
         .tab-content {
             display: none;
         }
+
         .tab-content.active {
             display: block;
         }
@@ -304,7 +435,7 @@
 
         function updateSelects() {
             console.log('🔄 Przywracanie selectów:', siloAssignments);
-            
+
             ['5m', '3m', '1m', 'ambient'].forEach(pos => {
                 const select = document.getElementById(`select-${pos}`);
                 if (select && siloAssignments[pos]) {
@@ -323,19 +454,19 @@
         function populateSelects(sensors) {
             // sensors = [{id: "28ff123456789abc"}, ...]
             const options = ['<option value="">-- Wybierz --</option>'];
-            
+
             sensors.forEach(sensor => {
                 // Używa sensor.id z obiektu
                 options.push(`<option value="${sensor.id}">${sensor.id.slice(-8)} - ${sensor.name || 'Sensor'}</option>`);
             });
-            
+
             // Zachowaj wartości przed zmianą
             const savedValues = {};
             ['5m', '3m', '1m', 'ambient'].forEach(pos => {
                 const select = document.getElementById(`select-${pos}`);
                 savedValues[pos] = select ? select.value : null;
             });
-            
+
             // Wypełnij select'y
             ['5m', '3m', '1m', 'ambient'].forEach(pos => {
                 const select = document.getElementById(`select-${pos}`);
@@ -352,7 +483,7 @@
         function updateAssignmentsPreview(sensors) {
             const preview = document.getElementById('assignments-preview');
             let html = '<h4 style="margin-bottom: 15px;">Podgląd:</h4>';
-            
+
             ['5m', '3m', '1m', 'ambient'].forEach(pos => {
                 const sensorId = siloAssignments[pos];
                 const sensor = sensors.find(s => s.id === sensorId);
@@ -367,21 +498,21 @@
         async function scanSensors() {
             try {
                 document.getElementById('status').textContent = 'Skanowanie sensorów...';
-                
+
                 const response = await fetch(`${BACKEND_URL}/api/scan`);
                 const sensorIds = await response.json();
-                
+
                 // 🆕 POPRAW - wyodrębnij ID z obiektów
-                const sensors = sensorIds.map(item => item.id); 
-                
+                const sensors = sensorIds.map(item => item.id);
+
                 renderSensors(sensorIds);           // Lista obiektów [{id: "..."}]
                 populateSelects(sensorIds);         // Obiekty z id
                 updateAssignmentsPreview(sensorIds); // Obiekty z id
-                
+
                 document.getElementById('status').textContent = `${sensorIds.length} sensorów`;
                 document.getElementById('status').className = 'status new';
-                
-            } catch(e) {
+
+            } catch (e) {
                 document.getElementById('status').textContent = '❌ Błąd skanu';
                 console.error('Scan error:', e);
             }
@@ -390,7 +521,7 @@
         async function updateTemps() {
             const temps = await getTemps();
             console.log('📡 Otrzymane temps:', temps);
-            
+
             // 🆕 PRZEKształć format
             const sensorsWithTemps = Object.entries(siloAssignments)
                 .map(([pos, sensorId]) => {
@@ -405,9 +536,9 @@
                     return null;
                 })
                 .filter(Boolean);
-            
+
             console.log('🔄 Sensory dla silo:', sensorsWithTemps);
-            
+
             // 🆕 AKTUALIZUJ Sensors + Silo
             if (sensorsWithTemps.length > 0) {
                 updateIndividualCharts(sensorsWithTemps);
@@ -417,20 +548,20 @@
 
         function updateSensorsDisplay(temps) {
             console.log('🔄 updateSensorsDisplay - temps:', temps); // DEBUG
-            
+
             // Użyj data-sensor-id zamiast parsowania tekstu
             const sensorDivs = document.querySelectorAll('#sensors-list .sensor');
-            
+
             sensorDivs.forEach(sensorDiv => {
                 const sensorId = sensorDiv.getAttribute('data-sensor-id');
                 const tempElement = sensorDiv.querySelector('.temp');
-                
+
                 console.log(`Sensor ${sensorId}: temp=${temps[sensorId] ? temps[sensorId].toFixed(1) : 'brak'}`);
-                
+
                 if (temps[sensorId]) {
                     const temp = temps[sensorId];
                     tempElement.textContent = temp.toFixed(1) + '°C';
-                    
+
                     // Critical check
                     const ALARM_MIN = -10;
                     const ALARM_MAX = 50;
@@ -454,21 +585,21 @@
 
         function renderSensors(sensorIds) {
             const container = document.getElementById('sensors-list');
-            
+
             container.innerHTML = sensorIds.map(sensor => `
                 <div class="sensor 
-                    ${siloAssignments['5m'] === sensor.id || 
-                    siloAssignments['3m'] === sensor.id || 
-                    siloAssignments['1m'] === sensor.id || 
+                    ${siloAssignments['5m'] === sensor.id ||
+                    siloAssignments['3m'] === sensor.id ||
+                    siloAssignments['1m'] === sensor.id ||
                     siloAssignments['ambient'] === sensor.id ? 'assigned' : 'unassigned'}" 
                     data-sensor-id="${sensor.id}">
                     <div><strong>📍 ${sensor.id}</strong></div>
                     <div class="temp">--°C</div>
                     ${siloAssignments['5m'] === sensor.id ? `<div class="assigned-pos">✅ 5m</div>` :
                     siloAssignments['3m'] === sensor.id ? `<div class="assigned-pos">✅ 3m</div>` :
-                    siloAssignments['1m'] === sensor.id ? `<div class="assigned-pos">✅ 1m</div>` :
-                    siloAssignments['ambient'] === sensor.id ? `<div class="assigned-pos">✅ Otoczenie</div>` : 
-                    `<div class="unassigned">⭕ Unassigned</div>`}
+                        siloAssignments['1m'] === sensor.id ? `<div class="assigned-pos">✅ 1m</div>` :
+                            siloAssignments['ambient'] === sensor.id ? `<div class="assigned-pos">✅ Otoczenie</div>` :
+                                `<div class="unassigned">⭕ Unassigned</div>`}
                 </div>
             `).join('');
         }
@@ -478,36 +609,36 @@
             const position = parseFloat(document.getElementById(`pos-${id}`).value) || 0;
             const alarm_min = parseFloat(document.getElementById(`min-${id}`).value) || -5;
             const alarm_max = parseFloat(document.getElementById(`max-${id}`).value) || 40;
-            
+
             try {
                 const response = await fetch(`${BACKEND_URL}/api/assign`, {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({id, name, position, alarm_min, alarm_max})
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, name, position, alarm_min, alarm_max })
                 });
-                
+
                 if (response.ok) {
                     document.getElementById('status').textContent = `✅ ${name} zapisany!`;
                     document.getElementById('status').className = 'status saved';
                     setTimeout(scanSensors, 1000);
                 }
-            } catch(e) {
+            } catch (e) {
                 document.getElementById('status').textContent = '❌ Błąd zapisu';
                 document.getElementById('status').className = 'status';
             }
         }
 
         function updateIndividualCharts(sensors) {
-            const now = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            
+            const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
             // 🆕 Obsługa obu formatów (dla kompatybilności)
             const _5m = sensors.find(s => s.id === siloAssignments['5m'] || s.position === '5m');
             const _3m = sensors.find(s => s.id === siloAssignments['3m'] || s.position === '3m');
             const _1m = sensors.find(s => s.id === siloAssignments['1m'] || s.position === '1m');
             const ambient = sensors.find(s => s.id === siloAssignments['ambient'] || s.position === 'ambient');
-            
+
             console.log('🎯 Znalezione sensory:', { _5m: _5m?.temp, _3m: _3m?.temp, _1m: _1m?.temp, ambient: ambient?.temp });
-            
+
             // Reszta bez zmian - updateTempDisplay()...
             function updateTempDisplay(id, temp, isCritical) {
                 const element = document.getElementById(id);
@@ -520,21 +651,21 @@
                     }
                 }
             }
-            
+
             const ALARM_MIN = -10;
             const ALARM_MAX = 50;
-            
+
             updateTempDisplay('5m-temp', _5m?.temp, _5m?.temp && (_5m.temp < ALARM_MIN || _5m.temp > ALARM_MAX));
             updateTempDisplay('3m-temp', _3m?.temp, _3m?.temp && (_3m.temp < ALARM_MIN || _3m.temp > ALARM_MAX));
             updateTempDisplay('1m-temp', _1m?.temp, _1m?.temp && (_1m.temp < ALARM_MIN || _1m.temp > ALARM_MAX));
             updateTempDisplay('ambient-temp', ambient?.temp, ambient?.temp && (ambient.temp < ALARM_MIN || ambient.temp > ALARM_MAX));
-            
+
             // Wykresy
             const positions = { '5m': _5m, '3m': _3m, '1m': _1m, 'ambient': ambient };
             Object.keys(positions).forEach(pos => {
                 const sensor = positions[pos];
                 if (sensor && sensor.temp !== null && sensor.temp !== undefined) {
-                    history[pos].push({time: now, temp: sensor.temp});
+                    history[pos].push({ time: now, temp: sensor.temp });
                     if (history[pos].length > 20) history[pos].shift();
                     console.log(`📈 Updating ${pos}: ${sensor.temp}°C`);
                 }
@@ -545,44 +676,46 @@
         function updateSingleChart(position, data) {
             const canvas = document.getElementById(`chart-${position}`);
             if (!canvas) return;
-            
+
             const ctx = canvas.getContext('2d');
-            
+
             if (!charts[position]) {
                 // Stwórz nowy wykres
                 charts[position] = new Chart(ctx, {
                     type: 'line',
-                    data: { labels: [], datasets: [{
-                        label: `${position.toUpperCase()} (°C)`,
-                        data: [],
-                        borderColor: getColorForPosition(position),
-                        backgroundColor: getColorForPosition(position, 0.1),
-                        tension: 0.4,
-                        fill: true,
-                        pointRadius: 3
-                    }]},
+                    data: {
+                        labels: [], datasets: [{
+                            label: `${position.toUpperCase()} (°C)`,
+                            data: [],
+                            borderColor: getColorForPosition(position),
+                            backgroundColor: getColorForPosition(position, 0.1),
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 3
+                        }]
+                    },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         scales: {
-                            y: { 
+                            y: {
                                 beginAtZero: false,
                                 grid: { color: 'rgba(255,255,255,0.1)' },
                                 ticks: { color: '#e0e0e0' }
                             },
-                            x: { 
+                            x: {
                                 grid: { color: 'rgba(255,255,255,0.1)' },
                                 ticks: { color: '#b0b0b0', maxRotation: 45 }
                             }
                         },
-                        plugins: { 
+                        plugins: {
                             legend: { labels: { color: '#e0e0e0' } },
                             title: { display: false }
                         }
                     }
                 });
             }
-            
+
             // Aktualizuj dane
             charts[position].data.labels = data.map(d => d.time);
             charts[position].data.datasets[0].data = data.map(d => d.temp);
@@ -592,7 +725,7 @@
         function getColorForPosition(pos) {
             const colors = {
                 '5m': '#00d4ff',
-                '3m': '#ff6b6b', 
+                '3m': '#ff6b6b',
                 '1m': '#f39c12',
                 'ambient': '#2ecc71'
             };
@@ -603,7 +736,7 @@
             const colors = {
                 '5m': 'rgba(0,212,255,0.1)',
                 '3m': 'rgba(255,107,107,0.1)',
-                '1m': 'rgba(243,156,18,0.1)', 
+                '1m': 'rgba(243,156,18,0.1)',
                 'ambient': 'rgba(46,204,113,0.1)'
             };
             return colors[pos] || 'rgba(255,255,255,0.1)';
@@ -612,21 +745,32 @@
         async function getTemps() {
             try {
                 const response = await fetch(`${BACKEND_URL}/api/temps`);
-                return await response.json();
-            } catch(e) {
+                const data = await response.json();
+                console.log('Raw /api/temps response:', data);
+
+                // Transform: {"sensors": [{sensorId, temperature}, ...]} → {sensorId: temperature, ...}
+                const tempsDict = {};
+                if (data.sensors && Array.isArray(data.sensors)) {
+                    data.sensors.forEach(sensor => {
+                        tempsDict[sensor.sensorId] = sensor.temperature;
+                    });
+                }
+                console.log('Transformed temps dict:', tempsDict);
+                return tempsDict;
+            } catch (e) {
                 console.error('Błąd temperatur:', e);
-                return [];
+                return {};
             }
         }
-        
+
         async function loadAssignments() {
             try {
                 const response = await fetch(`${BACKEND_URL}/api/assignments`);
                 siloAssignments = await response.json();
                 console.log('📥 Backend assignments:', siloAssignments);
-            } catch(e) {
+            } catch (e) {
                 console.error('Brak backendu, default:', e);
-                siloAssignments = {'5m':null,'3m':null,'1m':null,'ambient':null};
+                siloAssignments = { '5m': null, '3m': null, '1m': null, 'ambient': null };
             }
         }
 
@@ -637,13 +781,13 @@
                 '1m': document.getElementById('select-1m').value || null,
                 'ambient': document.getElementById('select-ambient').value || null
             };
-            
+
             await fetch(`${BACKEND_URL}/api/assignments`, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(siloAssignments)
             });
-            
+
             console.log('💾 Backend ZAPISANO!');
             await updateTemps();
         }
@@ -651,7 +795,7 @@
         // Obiekty wykresów
         let charts = {
             '5m': null,
-            '3m': null, 
+            '3m': null,
             '1m': null,
             'ambient': null
         };
@@ -675,4 +819,5 @@
         initApp();
     </script>
 </body>
+
 </html>
