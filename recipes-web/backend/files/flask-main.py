@@ -1,6 +1,8 @@
-from flask import Flask, jsonify, request  # request dla query params
+from flask import Flask, jsonify, request  # request for query parameters
 import sys
+import threading
 from sensors import SensorManager, RealSensorProvider, AssignmentsManager
+from dataReceiver import get_sensors, uds_client
 
 
 def create_app(config_name='default', mock=False):
@@ -13,23 +15,39 @@ def create_app(config_name='default', mock=False):
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
         return response
     
-    # 🆕 Użyj SensorManager
+    # Initialize SensorManager
     sensor_manager = SensorManager(mock=mock)
     app.sensor_manager = sensor_manager
     
     @app.route('/api/scan')
     def scan():
-        sensors = app.sensor_manager.scan()
-        return jsonify([{"id": s.id} for s in sensors])
+        print("🔍 Scanning for sensors...")
+        # Return sensors from data received via Unix socket
+        sensors = get_sensors()
+        print(f"📡 Sensors in data store: {[s.get('sensorId') for s in sensors]}")
+        return jsonify([{"id": s.get("sensorId")} for s in sensors])
     
     @app.route('/api/temps')
     def temps():
-        temps_dict = app.sensor_manager.get_temps()
+        # Return sensor data from socket: sensorId, temperature, alarmCode
+        sensors = get_sensors()
+        print(f"🌡️ /api/temps called, sensors raw data: {sensors}")
+        temps_dict = {
+            "sensors": [
+                {
+                    "sensorId": s.get("sensorId"),
+                    "temperature": s.get("temperature"),
+                    "alarmCode": s.get("alarmCode")
+                }
+                for s in sensors
+            ]
+        }
+        print(f"🌡️ Returning temps_dict: {temps_dict}")
         return jsonify(temps_dict)
     
     @app.route('/api/switch-provider')
     def switch_provider():
-        provider_type = request.args.get('type', 'real')  # ✅ Teraz request działa
+        provider_type = request.args.get('type', 'real')  # Switch between mock and real sensor provider
         if provider_type == 'mock':
             app.sensor_manager.set_provider(SensorManager(mock=True).provider)
             return jsonify({"status": "mock"})
@@ -47,7 +65,7 @@ def create_app(config_name='default', mock=False):
         app.assignments_manager.set(data)
         return jsonify({"status": "saved"})
 
-    # Inicjalizacja w create_app():
+    # Initialize AssignmentsManager in create_app()
     assignments_manager = AssignmentsManager()
     app.assignments_manager = assignments_manager
     
@@ -55,9 +73,15 @@ def create_app(config_name='default', mock=False):
 
 if __name__ == '__main__':
     mock = '--mock' in sys.argv
+    debug = '--debug' in sys.argv
     app = create_app(mock=mock)
-    print("🚀 Backend działa:", "MOCK MODE" if mock else "REAL SENSORS")
-    print("📱 Telefon: http://192.168.1.xxx:5000")  # Twój lokalny IP!
+    print("🚀 Backend running:", "MOCK MODE" if mock else "REAL SENSORS")
+    print("🐛 Debug mode:", "ON" if debug else "OFF")
+    print("📱 Phone access: http://192.168.1.xxx:5000")  # Replace with your local IP
     
-    # 🆕 ZMIANA: 0.0.0.0 = DOSTĘPNE DLA TELEFONU
-    app.run(host='0.0.0.0', port=5000)
+    # Connect to C++ UDS server in background thread
+    print("🔌 Connecting to C++ UDS server on /run/silo-monitor.sock...")
+    threading.Thread(target=uds_client, daemon=True).start()
+    
+    # Bind to 0.0.0.0 to make backend accessible from other devices
+    app.run(host='0.0.0.0', port=5000, debug=debug)
