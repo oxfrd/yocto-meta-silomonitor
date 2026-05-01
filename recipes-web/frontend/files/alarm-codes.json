@@ -1,0 +1,7 @@
+{
+  "0x00": "No alarm",
+  "0x01": "Sensor disconnected",
+  "0x02": "Sensor error",
+  "0x03": "Invalid data",
+  "0xFF": "Unknown alarm"
+}

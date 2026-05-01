@@ -296,6 +296,31 @@
                         </div>
                     </div>
 
+                    <!-- Tabela alarmów -->
+                    <div style="margin-top: 40px;">
+                        <h2 style="margin-bottom: 20px; color: #00d4ff;">⚠️ Alarm states</h2>
+                        <table id="alarms-table"
+                            style="width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.05); border-radius: 8px; overflow: hidden;">
+                            <thead>
+                                <tr
+                                    style="background: rgba(0,212,255,0.2); border-bottom: 2px solid rgba(0,212,255,0.5);">
+                                    <th style="padding: 12px; text-align: left; color: #00d4ff; font-weight: 600;">📍
+                                        Position</th>
+                                    <th style="padding: 12px; text-align: left; color: #00d4ff; font-weight: 600;">Code
+                                    </th>
+                                    <th style="padding: 12px; text-align: left; color: #00d4ff; font-weight: 600;">
+                                        Description</th>
+                                </tr>
+                            </thead>
+                            <tbody id="alarms-tbody">
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <td colspan="3" style="padding: 12px; text-align: center; color: #888;">Data
+                                        loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -813,7 +838,35 @@
             await scanSensors();
             updateSelects();
             await updateTemps();
+            await loadAlarmsTable();
             setInterval(updateTemps, 5000);
+        }
+
+        async function loadAlarmsTable() {
+            try {
+                const response = await fetch('./alarm-codes.json');
+                if (!response.ok) throw new Error('Nie można załadować alarm-codes.json');
+                const alarmCodes = await response.json();
+
+                const positions = ['5m', '3m', '1m'];
+                const tbody = document.getElementById('alarms-tbody');
+                let html = '';
+
+                positions.forEach(pos => {
+                    const code = siloAssignments[pos] ? '0x00' : '0x01';
+                    const description = alarmCodes[code] || 'Unknown alarm code';
+
+                    html += `<tr>
+                        <td>${pos}</td>
+                        <td>${code}</td>
+                        <td>${description}</td>
+                    </tr>`;
+                });
+
+                tbody.innerHTML = html;
+            } catch (error) {
+                console.error(error);
+            }
         }
 
         initApp();

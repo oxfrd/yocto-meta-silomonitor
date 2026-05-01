@@ -84,4 +84,4 @@ if __name__ == '__main__':
     threading.Thread(target=uds_client, daemon=True).start()
     
     # Bind to 0.0.0.0 to make backend accessible from other devices
-    app.run(host='0.0.0.0', port=5000, debug=debug)
+    app.run(host='0.0.0.0', port=5000, debug=debug,use_reloader=False)
