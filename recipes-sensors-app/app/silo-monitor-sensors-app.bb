@@ -4,8 +4,8 @@ DESCRIPTION = "Real-time sensors monitoring application for silo-monitor"
 LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
 
-PV = "0.1.0+git"
-SRCREV = "master"
+PV = "0.2"
+SRCREV = "2741e976b333f00b2878cefeca01b075db1be182"
 
 SRC_URI = "git://github.com/oxfrd/silo-sensors-app;protocol=https;branch=master \
            file://silo-monitor-sensors-app.service"
