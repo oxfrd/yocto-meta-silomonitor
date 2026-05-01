@@ -844,7 +844,7 @@
 
         async function loadAlarmsTable() {
             try {
-                const response = await fetch('./alarm-codes.json');
+                const response = await fetch('./alarm-codes.json', { cache: 'no-cache' });
                 if (!response.ok) throw new Error('Nie można załadować alarm-codes.json');
                 const alarmCodes = await response.json();
 

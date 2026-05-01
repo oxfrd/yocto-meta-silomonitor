@@ -5,6 +5,7 @@ LICENSE = "CLOSED"
 SRC_URI = "file://silo-img.png"
 SRC_URI += "file://index.html"
 SRC_URI += "file://silo-monitor-webserver.service"
+SRC_URI += "file://alarm-codes.json"
 
 inherit systemd
 
@@ -15,6 +16,7 @@ do_install() {
     install -d ${D}${localstatedir}/www/html
     install -m 0644 ${WORKDIR}/index.html ${D}${localstatedir}/www/html/
     install -m 0644 ${WORKDIR}/silo-img.png ${D}${localstatedir}/www/html/
+    install -m 0644 ${WORKDIR}/alarm-codes.json ${D}${localstatedir}/www/html/
 
     install -d ${D}${systemd_system_unitdir}
     install -m 0644 ${WORKDIR}/silo-monitor-webserver.service ${D}${systemd_system_unitdir}/
