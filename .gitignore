@@ -6,3 +6,4 @@ silo_assignments.json
 __pycache__/
 wpa_supplicant-nl80211-wlan0.conf
 build/
+*_pb2.py
