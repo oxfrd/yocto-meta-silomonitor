@@ -80,8 +80,9 @@ if __name__ == '__main__':
     print("📱 Phone access: http://192.168.1.xxx:5000")  # Replace with your local IP
     
     # Connect to C++ UDS server in background thread
-    print("🔌 Connecting to C++ UDS server on /run/silo-monitor.sock...")
-    threading.Thread(target=uds_client, daemon=True).start()
+    socket_path = "/tmp/silo-monitor.sock" if mock else "/run/silo-monitor.sock"
+    print(f"🔌 Connecting to C++ UDS server on {socket_path}...")
+    threading.Thread(target=uds_client, args=(mock,), daemon=True).start()
     
     # Bind to 0.0.0.0 to make backend accessible from other devices
     app.run(host='0.0.0.0', port=5000, debug=debug,use_reloader=False)
