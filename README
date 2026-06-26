@@ -28,6 +28,7 @@ Table of Contents
 
   I. Adding the meta-silomonitor layer to your build
  II. Misc
+III. Mocked App
 
 
 I. Adding the meta-silomonitor layer to your build
@@ -42,3 +43,16 @@ II. Misc
 
 Update software on sd card:
 sudo bmaptool copy --bmap oldschoolic-rpi4-debug-raspberrypi4-64.rootfs.wic.bmap oldschoolic-rpi4-debug-raspberrypi4-64.rootfs.wic.bz2 /dev/sdb
+
+
+III. Mocked App
+================
+To run mocked app, run the following path:
+1. run mocked silo-monitor-sensors-app: `./silo-monitor-sensors-app mocked`
+2. `cd backend/files`
+3. `source .venv/bin/activate`
+4. `sudo ./.venv/bin/python3 ./flask-main.py`
+5. `python3 -m http.server 8000`
+
+To manually parse protobuf message, run the following command:
+`sudo socat -u UNIX-CONNECT:/tmp/silo-monitor.sock STDOUT | dd ibs=1 skip=4 | protoc -I /home/oxfrd/moje/yocto/silo-monitor-image/silo-sensors-proto-msg/proto --decode=silo.MonitoringSnapshot snapshot.proto`
